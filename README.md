@@ -28,6 +28,14 @@ CLI tool to search for places using Google Maps API.
 nix run github:Mic92/mics-skills#gmaps-cli
 ```
 
+### kagi-search
+
+CLI tool for searching Kagi using session tokens.
+
+```bash
+nix run github:Mic92/mics-skills#kagi-search
+```
+
 ### pexpect-cli
 
 Persistent pexpect sessions for automating interactive terminal applications.

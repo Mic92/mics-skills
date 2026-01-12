@@ -30,6 +30,7 @@
             browser-cli-extension = (pkgs.callPackages ./firefox-extensions { }).browser-cli-extension;
             db-cli = pkgs.callPackage ./db-cli { };
             gmaps-cli = pkgs.python3.pkgs.callPackage ./gmaps-cli { };
+            kagi-search = pkgs.python3.pkgs.callPackage ./kagi-search { };
             pexpect-cli = pkgs.callPackage ./pexpect-cli { };
           };
 
@@ -58,6 +59,12 @@
               "browser-cli" = {
                 extraPythonPackages = with pkgs.python3.pkgs; [
                   websockets
+                ];
+              };
+              "kagi-search" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  beautifulsoup4
+                  types-beautifulsoup4
                 ];
               };
             };
