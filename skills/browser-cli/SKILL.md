@@ -149,3 +149,5 @@ await wait("text", "Success")
 snap()
 EOF
 ```
+
+See [README.md](../../browser-cli/README.md) for installation, architecture, and full API reference.
