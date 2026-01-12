@@ -4,53 +4,27 @@ A collection of CLI tools and skills designed to be useful for LLM agents.
 
 ## Packages
 
-### browser-cli
-
-Control Firefox browser from the command line. Useful for web automation, scraping, and testing.
-
-```bash
-nix run github:Mic92/mics-skills#browser-cli
-```
-
-### db-cli
-
-CLI tool for searching Deutsche Bahn train connections.
-
-```bash
-nix run github:Mic92/mics-skills#db-cli
-```
-
-### gmaps-cli
-
-CLI tool to search for places using Google Maps API.
-
-```bash
-nix run github:Mic92/mics-skills#gmaps-cli
-```
-
-### kagi-search
-
-CLI tool for searching Kagi using session tokens.
-
-```bash
-nix run github:Mic92/mics-skills#kagi-search
-```
-
-### pexpect-cli
-
-Persistent pexpect sessions for automating interactive terminal applications.
-
-```bash
-nix run github:Mic92/mics-skills#pexpect-cli
-```
+| Package                     | Description                                                     |
+| --------------------------- | --------------------------------------------------------------- |
+| [browser-cli](browser-cli/) | Control Firefox browser from the command line                   |
+| [db-cli](db-cli/)           | Search Deutsche Bahn train connections                          |
+| [gmaps-cli](gmaps-cli/)     | Search for places and get directions using Google Maps          |
+| [kagi-search](kagi-search/) | Search the web using Kagi with Quick Answer AI summaries        |
+| [pexpect-cli](pexpect-cli/) | Persistent pexpect sessions for interactive terminal automation |
 
 ## Skills
 
-The `skills/` directory contains Claude skill definitions that can be used with
-Claude Code or similar LLM coding assistants:
+The `skills/` directory contains Claude skill definitions for use with Claude
+Code or similar LLM coding assistants. Each skill provides usage examples and
+references the package README for setup instructions.
 
-- `skills/browser-cli/SKILL.md` - Instructions for using browser-cli
-- `skills/pexpect-cli/SKILL.md` - Instructions for using pexpect-cli
+| Skill                                      | Description                                       |
+| ------------------------------------------ | ------------------------------------------------- |
+| [browser-cli](skills/browser-cli/SKILL.md) | Web automation, scraping, testing                 |
+| [db-cli](skills/db-cli/SKILL.md)           | Train route and schedule search                   |
+| [gmaps-cli](skills/gmaps-cli/SKILL.md)     | Place search and directions                       |
+| [kagi-search](skills/kagi-search/SKILL.md) | Web search with AI summaries                      |
+| [pexpect-cli](skills/pexpect-cli/SKILL.md) | SSH, database, and interactive program automation |
 
 ## Installation
 
@@ -59,6 +33,10 @@ Claude Code or similar LLM coding assistants:
 ```bash
 # Run a tool directly
 nix run github:Mic92/mics-skills#browser-cli
+nix run github:Mic92/mics-skills#db-cli
+nix run github:Mic92/mics-skills#gmaps-cli
+nix run github:Mic92/mics-skills#kagi-search
+nix run github:Mic92/mics-skills#pexpect-cli
 
 # Add to your flake inputs
 {
@@ -66,10 +44,11 @@ nix run github:Mic92/mics-skills#browser-cli
 }
 ```
 
-### Development
+## Development
 
 ```bash
 nix develop
+nix fmt
 nix flake check
 ```
 
