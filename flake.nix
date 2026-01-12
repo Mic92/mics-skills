@@ -23,8 +23,19 @@
       ];
 
       perSystem =
-        { pkgs, ... }:
         {
+          pkgs,
+          self',
+          lib,
+          ...
+        }:
+        {
+          checks =
+            let
+              packages = lib.mapAttrs' (n: lib.nameValuePair "package-${n}") self'.packages;
+            in
+            packages;
+
           packages = {
             browser-cli = pkgs.python3.pkgs.callPackage ./browser-cli { };
             browser-cli-extension = (pkgs.callPackages ./firefox-extensions { }).browser-cli-extension;
