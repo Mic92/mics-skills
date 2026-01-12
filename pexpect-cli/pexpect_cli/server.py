@@ -12,7 +12,8 @@ import time
 import traceback
 from contextlib import suppress
 from pathlib import Path
-from typing import Any
+from types import FrameType
+from typing import Any, TextIO
 
 import pexpect  # type: ignore[import-untyped]
 
@@ -30,9 +31,9 @@ def get_socket_path(task_id: str) -> Path:
     return sock_dir / f"{task_id}.sock"
 
 
-def cleanup_child(child: Any) -> None:
+def cleanup_child(child: pexpect.spawn | None) -> None:
     """Terminate a child process if it exists."""
-    if child is not None and hasattr(child, "isalive") and child.isalive():
+    if child is not None and child.isalive():
         with suppress(Exception):
             child.terminate(force=True)
 
@@ -63,7 +64,7 @@ def handle_request(conn: socket.socket, namespace: dict[str, Any]) -> None:  # n
 
         # Create a custom file-like object that tees output to both stdout and a buffer
         class TeeOutput:
-            def __init__(self, original_stdout: Any) -> None:
+            def __init__(self, original_stdout: TextIO) -> None:
                 self.original = original_stdout
                 self.buffer = io.StringIO()
 
@@ -156,7 +157,7 @@ def main() -> None:
     # Persistent namespace
     namespace: dict[str, Any] = {"pexpect": pexpect, "child": None}
 
-    def signal_handler(signum: int, frame: Any) -> None:
+    def signal_handler(signum: int, frame: FrameType | None) -> None:
         """Handle shutdown signals."""
         print(f"\n[pexpect-server] Received signal {signum}, shutting down...")
         cleanup_child(namespace.get("child"))

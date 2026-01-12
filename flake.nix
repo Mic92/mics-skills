@@ -42,6 +42,26 @@
             programs.shellcheck.enable = true;
             programs.shfmt.enable = true;
 
+            programs.mypy.enable = true;
+            programs.mypy.directories = {
+              "pexpect-cli" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  pexpect
+                  pytest
+                ];
+              };
+              "gmaps-cli" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  pytest
+                ];
+              };
+              "browser-cli" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  websockets
+                ];
+              };
+            };
+
             settings.global.excludes = [
               "*.lock"
               "*.toml"

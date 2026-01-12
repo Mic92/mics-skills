@@ -18,7 +18,7 @@ PEXPECT_CLI = [str(BIN_DIR / "pexpect-cli")]
 PEXPECT_SERVER = [str(BIN_DIR / "pexpect-server")]
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def isolated_pueue() -> Generator[dict[str, str]]:
     """Set up an isolated pueue instance for testing."""
     # Use /tmp on macOS to avoid long socket path issues
