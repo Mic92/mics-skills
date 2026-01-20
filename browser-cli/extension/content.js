@@ -69,9 +69,15 @@ class SnapshotElement {
    */
   toString() {
     let s = `[${this.ref}] ${this.role}`;
-    if (this.name) s += ` "${this.name}"`;
-    if (this.attrs.length > 0) s += ` [${this.attrs.join(", ")}]`;
-    if (this.value !== undefined) s += ` value="${this.value}"`;
+    if (this.name) {
+      s += ` "${this.name}"`;
+    }
+    if (this.attrs.length > 0) {
+      s += ` [${this.attrs.join(", ")}]`;
+    }
+    if (this.value !== undefined) {
+      s += ` value="${this.value}"`;
+    }
     return s;
   }
 
@@ -376,7 +382,9 @@ class SnapshotDiff {
  * Create and initialize the virtual cursor
  */
 function initializeVirtualCursor() {
-  if (virtualCursor) return;
+  if (virtualCursor) {
+    return;
+  }
 
   virtualCursor = document.createElement("div");
   virtualCursor.id = "browser-cli-cursor";
@@ -503,7 +511,9 @@ function injectConsoleOverride() {
 }
 
 window.addEventListener("message", (event) => {
-  if (event.source !== window) return;
+  if (event.source !== window) {
+    return;
+  }
 
   if (event.data && event.data.type === "browser-cli-console") {
     consoleLogs.push({
@@ -606,7 +616,9 @@ function findByRef(ref) {
 function findBySelector(selector) {
   try {
     const element = document.querySelector(selector);
-    if (element) return element;
+    if (element) {
+      return element;
+    }
     throw new Error(`No element matches CSS selector: ${selector}`);
   } catch (error) {
     if (error instanceof Error && error.name === "SyntaxError") {
@@ -645,7 +657,9 @@ function findByText(text) {
  */
 function findByAriaLabel(label) {
   const element = document.querySelector(`[aria-label="${CSS.escape(label)}"]`);
-  if (element) return element;
+  if (element) {
+    return element;
+  }
   throw new Error(`No element found with aria-label: ${label}`);
 }
 
@@ -658,7 +672,9 @@ function findByPlaceholder(placeholder) {
   const element = document.querySelector(
     `[placeholder="${CSS.escape(placeholder)}"]`,
   );
-  if (element) return element;
+  if (element) {
+    return element;
+  }
   throw new Error(`No element found with placeholder: ${placeholder}`);
 }
 
@@ -704,7 +720,9 @@ function find(selector, selectorType = "css") {
  */
 function getElementRole(element) {
   const explicitRole = element.getAttribute("role");
-  if (explicitRole) return explicitRole;
+  if (explicitRole) {
+    return explicitRole;
+  }
 
   const tag = element.tagName.toLowerCase();
 
@@ -736,9 +754,15 @@ function getElementRole(element) {
 
   if (tag === "input") {
     const type = element.getAttribute("type") || "text";
-    if (type === "checkbox") return "checkbox";
-    if (type === "radio") return "radio";
-    if (type === "submit" || type === "button") return "button";
+    if (type === "checkbox") {
+      return "checkbox";
+    }
+    if (type === "radio") {
+      return "radio";
+    }
+    if (type === "submit" || type === "button") {
+      return "button";
+    }
     return `input[${type}]`;
   }
 
@@ -753,13 +777,17 @@ function getElementRole(element) {
 function getAccessibleName(element) {
   // aria-label takes precedence
   const ariaLabel = element.getAttribute("aria-label");
-  if (ariaLabel) return ariaLabel;
+  if (ariaLabel) {
+    return ariaLabel;
+  }
 
   // aria-labelledby
   const labelledBy = element.getAttribute("aria-labelledby");
   if (labelledBy) {
     const labelEl = document.querySelector(`#${CSS.escape(labelledBy)}`);
-    if (labelEl) return labelEl.textContent?.trim() || "";
+    if (labelEl) {
+      return labelEl.textContent?.trim() || "";
+    }
   }
 
   // For inputs, check associated label
@@ -780,12 +808,16 @@ function getAccessibleName(element) {
       const label = document.querySelector(
         `label[for="${CSS.escape(element.id)}"]`,
       );
-      if (label) return label.textContent?.trim() || "";
+      if (label) {
+        return label.textContent?.trim() || "";
+      }
     }
 
     // Fall back to placeholder
     const placeholder = element.getAttribute("placeholder");
-    if (placeholder) return placeholder;
+    if (placeholder) {
+      return placeholder;
+    }
   }
 
   // alt text for images
@@ -795,7 +827,9 @@ function getAccessibleName(element) {
 
   // title attribute
   const title = element.getAttribute("title");
-  if (title) return title;
+  if (title) {
+    return title;
+  }
 
   // Text content for buttons, links, etc.
   const tag = element.tagName.toLowerCase();
@@ -863,8 +897,12 @@ function getElementAttrs(element) {
 
   // Expanded/collapsed
   const expanded = element.getAttribute("aria-expanded");
-  if (expanded === "true") attrs.push("expanded");
-  if (expanded === "false") attrs.push("collapsed");
+  if (expanded === "true") {
+    attrs.push("expanded");
+  }
+  if (expanded === "false") {
+    attrs.push("collapsed");
+  }
 
   // Readonly
   if (element.hasAttribute("readonly")) {
@@ -945,7 +983,9 @@ function shouldIncludeElement(element) {
   // Include elements with explicit roles
   if (element.hasAttribute("role")) {
     const role = element.getAttribute("role");
-    if (role && !["presentation", "none"].includes(role)) return true;
+    if (role && !["presentation", "none"].includes(role)) {
+      return true;
+    }
   }
 
   // Include headings
@@ -1040,7 +1080,9 @@ function generateSnapshot(options = {}) {
   const allElements = document.body.querySelectorAll("*");
 
   for (const element of allElements) {
-    if (!shouldIncludeElement(element)) continue;
+    if (!shouldIncludeElement(element)) {
+      continue;
+    }
 
     const role = getElementRole(element);
     const name = getAccessibleName(element);
@@ -1056,8 +1098,12 @@ function generateSnapshot(options = {}) {
       continue;
     }
 
-    if (options.links && role !== "link") continue;
-    if (options.buttons && role !== "button") continue;
+    if (options.links && role !== "link") {
+      continue;
+    }
+    if (options.buttons && role !== "button") {
+      continue;
+    }
 
     if (options.text) {
       const searchText = options.text.toLowerCase();
@@ -1843,6 +1889,177 @@ async function download(url, filename) {
 // ============================================================================
 // Message handling for background script commands
 // ============================================================================
+// Reader Mode (Mozilla Readability)
+// ============================================================================
+
+/**
+ * @typedef {object} ReadOptions
+ * @property {number} [maxLength] - Maximum length of text content (default: no limit)
+ * @property {boolean} [includeMetadata] - Include title, byline, etc. (default: true)
+ */
+
+/**
+ * @typedef {object} ReadResult
+ * @property {string} title - Article title
+ * @property {string} [byline] - Author information
+ * @property {string} [siteName] - Name of the site
+ * @property {string} [excerpt] - Short excerpt/description
+ * @property {string} [publishedTime] - Publication time
+ * @property {string} content - Plain text content of the article
+ * @property {number} length - Length of content in characters
+ */
+
+/**
+ * Collect all documents including iframes that may contain content
+ * @returns {Document[]}
+ */
+function collectDocuments() {
+  /** @type {Document[]} */
+  const docs = [document];
+  for (const f of document.querySelectorAll("iframe,frame")) {
+    try {
+      const frame = /** @type {HTMLIFrameElement | HTMLFrameElement} */ (f);
+      const v =
+        frame.contentDocument?.documentElement?.textContent?.length ?? 0;
+      if (v > 100 && frame.contentDocument) {
+        docs.push(frame.contentDocument);
+      }
+    } catch {
+      // Cross-origin iframe, skip
+    }
+  }
+  // Sort by content length (longest first)
+  docs.sort((a, b) => {
+    const aLen = a.documentElement?.textContent?.length ?? 0;
+    const bLen = b.documentElement?.textContent?.length ?? 0;
+    return bLen - aLen;
+  });
+  return docs;
+}
+
+/**
+ * Fix SVG elements that may cause issues with Readability
+ * @param {Document} doc
+ */
+function fixSVGElements(doc) {
+  for (const svg of doc.querySelectorAll("svg")) {
+    if (!svg.hasAttribute("width") || !svg.hasAttribute("height")) {
+      try {
+        const style = window.getComputedStyle(svg);
+        if (!svg.hasAttribute("width")) {
+          svg.setAttribute("width", style.width);
+        }
+        if (!svg.hasAttribute("height")) {
+          svg.setAttribute("height", style.height);
+        }
+      } catch {
+        // Skip if getComputedStyle fails
+      }
+    }
+  }
+}
+
+/**
+ * Extract readable article content from the page using Mozilla Readability
+ * Optimized for LLM consumption - returns plain text to minimize tokens
+ * @param {ReadOptions} [options] - Options for extraction
+ * @returns {ReadResult|null} Article content or null if not extractable
+ */
+function read(options = {}) {
+  // Check if Readability is available (injected before content.js)
+  if (typeof Readability === "undefined") {
+    throw new TypeError(
+      "Readability not available. This should not happen - please report a bug.",
+    );
+  }
+
+  const { maxLength, includeMetadata = true } = options;
+
+  // Fix SVG elements before cloning
+  fixSVGElements(document);
+
+  // Collect documents from main page and iframes
+  const docs = collectDocuments();
+
+  /** @type {ReturnType<Readability['parse']>} */
+  // eslint-disable-next-line unicorn/no-null -- Readability.parse() returns null
+  let article = null;
+
+  // Try each document until we find readable content
+  for (const d of docs) {
+    // Clone the document to avoid modifying the actual page
+    const documentClone = d.cloneNode(true);
+
+    // Create Readability instance with options optimized for text extraction
+    const reader = new Readability(/** @type {Document} */ (documentClone), {
+      charThreshold: 100, // Lower threshold to capture more content
+    });
+
+    article = reader.parse();
+    if (article && article.textContent && article.textContent.length > 100) {
+      break;
+    }
+  }
+
+  if (!article) {
+    // eslint-disable-next-line unicorn/no-null -- null indicates "no article found" (matches Readability API)
+    return null;
+  }
+
+  // Get plain text content
+  let textContent = article.textContent || "";
+
+  // Normalize whitespace: collapse multiple newlines/spaces
+  textContent = textContent
+    .replaceAll(/\n{3,}/g, "\n\n") // Max 2 consecutive newlines
+    .replaceAll(/[ \t]+/g, " ") // Collapse horizontal whitespace
+    .replaceAll(/\n +/g, "\n") // Remove leading spaces on lines
+    .replaceAll(/ +\n/g, "\n") // Remove trailing spaces on lines
+    .trim();
+
+  // Apply max length if specified
+  if (maxLength && textContent.length > maxLength) {
+    // Try to cut at a sentence or paragraph boundary
+    let cutPoint = textContent.lastIndexOf("\n\n", maxLength);
+    if (cutPoint < maxLength * 0.5) {
+      cutPoint = textContent.lastIndexOf(". ", maxLength);
+      if (cutPoint > 0) {
+        cutPoint += 1;
+      } // Include the period
+    }
+    if (cutPoint < maxLength * 0.5) {
+      cutPoint = maxLength;
+    }
+    textContent = textContent.slice(0, cutPoint).trim() + "\n\n[truncated]";
+  }
+
+  /** @type {ReadResult} */
+  const result = {
+    title: article.title || document.title,
+    content: textContent,
+    length: textContent.length,
+  };
+
+  // Include metadata if requested
+  if (includeMetadata) {
+    if (article.byline) {
+      result.byline = article.byline;
+    }
+    if (article.siteName) {
+      result.siteName = article.siteName;
+    }
+    if (article.excerpt) {
+      result.excerpt = article.excerpt;
+    }
+    if (article.publishedTime) {
+      result.publishedTime = article.publishedTime;
+    }
+  }
+
+  return result;
+}
+
+// ============================================================================
 
 /**
  * Serialize result for transport
@@ -1922,6 +2139,7 @@ async function handleExec(code) {
     "logs",
     "find",
     "wait",
+    "read",
     // Background script functions
     "shot",
     "tab",
@@ -1942,6 +2160,7 @@ async function handleExec(code) {
     logs,
     find,
     wait,
+    read,
     // Background script functions
     shot,
     tab,

@@ -7,5 +7,6 @@ JS API for browser automation.
 from browser_cli.bridge import NativeMessagingBridge
 from browser_cli.cli import main
 from browser_cli.client import BrowserClient
+from browser_cli.paths import get_socket_path
 
-__all__ = ["BrowserClient", "NativeMessagingBridge", "main"]
+__all__ = ["BrowserClient", "NativeMessagingBridge", "get_socket_path", "main"]

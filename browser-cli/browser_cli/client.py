@@ -2,12 +2,10 @@
 
 import asyncio
 import json
-import os
-import tempfile
-from pathlib import Path
 from typing import Any
 
 from browser_cli.errors import BrowserConnectionError, CommandError
+from browser_cli.paths import get_socket_path
 
 
 class BrowserClient:
@@ -18,10 +16,7 @@ class BrowserClient:
         if socket_path:
             self.socket_path = socket_path
         else:
-            runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
-            if not runtime_dir:
-                runtime_dir = tempfile.gettempdir()
-            self.socket_path = str(Path(runtime_dir) / "browser-cli.sock")
+            self.socket_path = str(get_socket_path())
 
         self.message_counter = 0
 

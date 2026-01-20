@@ -3,6 +3,10 @@ import jsdoc from "eslint-plugin-jsdoc";
 import unicorn from "eslint-plugin-unicorn";
 
 export default [
+  {
+    // Ignore vendored files - must be first and standalone
+    ignores: ["Readability.js"],
+  },
   js.configs.recommended,
   unicorn.configs.recommended,
   {
@@ -48,6 +52,7 @@ export default [
         NodeFilter: "readonly",
         SubmitEvent: "readonly",
         MutationObserver: "readonly",
+        Readability: "readonly",
       },
     },
     plugins: {

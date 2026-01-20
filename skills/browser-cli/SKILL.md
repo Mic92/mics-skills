@@ -62,6 +62,35 @@ logs()                    // Get console logs
 EOF
 ```
 
+## Reader Mode (Article Extraction)
+
+Extract readable article content using Mozilla Readability. Returns plain text
+optimized for LLM consumption.
+
+```bash
+browser-cli <<'EOF'
+await tab("https://example.com/article")
+read()                            // Extract article as plain text
+read({maxLength: 5000})           // Limit content length
+read({includeMetadata: false})    // Skip title/byline/etc
+EOF
+```
+
+Output:
+
+```json
+{
+  "title": "Article Title",
+  "byline": "John Doe",
+  "siteName": "Example News",
+  "excerpt": "Brief description...",
+  "content": "Full article text...",
+  "length": 12345
+}
+```
+
+Returns `null` if page content is not suitable for reader mode.
+
 ## Waiting
 
 ```bash

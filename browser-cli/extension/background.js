@@ -56,7 +56,9 @@ function generateTabId() {
  * Connect to native messaging host
  */
 function connectNativeHost() {
-  if (nativePort) return;
+  if (nativePort) {
+    return;
+  }
 
   console.log("Connecting to native messaging host...");
 
@@ -183,7 +185,9 @@ async function navigate(url, tabId) {
   const managedTabId = tabId || activeTabId;
   if (managedTabId && managedTabs.has(managedTabId)) {
     const managedTab = managedTabs.get(managedTabId);
-    if (managedTab) managedTab.url = url;
+    if (managedTab) {
+      managedTab.url = url;
+    }
   }
 
   return { message: `Navigated to ${url}` };
@@ -295,7 +299,9 @@ async function listTabs() {
       });
     } catch {
       managedTabs.delete(shortId);
-      if (activeTabId === shortId) activeTabId = undefined;
+      if (activeTabId === shortId) {
+        activeTabId = undefined;
+      }
     }
   }
 
@@ -485,6 +491,8 @@ async function handleCommand(message) {
  * @param {string} shortId
  */
 async function enableOnTab(tabId, shortId) {
+  // Inject Readability.js first, then content.js
+  await browser.tabs.executeScript(tabId, { file: "Readability.js" });
   await browser.tabs.executeScript(tabId, { file: "content.js" });
 
   await browser.tabs.executeScript(tabId, {
@@ -561,7 +569,9 @@ async function enableOnTab(tabId, shortId) {
  */
 async function disableOnTab(tabId, shortId) {
   managedTabs.delete(shortId);
-  if (activeTabId === shortId) activeTabId = undefined;
+  if (activeTabId === shortId) {
+    activeTabId = undefined;
+  }
 
   await browser.tabs.executeScript(tabId, {
     code: `(${function () {
@@ -716,7 +726,9 @@ browser.tabs.onRemoved.addListener((tabId) => {
   for (const [shortId, tab] of managedTabs) {
     if (tab.tabId === tabId) {
       managedTabs.delete(shortId);
-      if (activeTabId === shortId) activeTabId = undefined;
+      if (activeTabId === shortId) {
+        activeTabId = undefined;
+      }
       break;
     }
   }
