@@ -722,8 +722,32 @@ browser.tabs.onRemoved.addListener((tabId) => {
   }
 });
 
-browser.browserAction.onClicked.addListener(async () => {
-  await createNewTab();
+browser.browserAction.onClicked.addListener(async (tab) => {
+  // Take over the current tab instead of creating a new one
+  if (tab.id === undefined) {
+    // Fallback to creating a new tab if no current tab
+    await createNewTab();
+    return;
+  }
+
+  // Check if this tab is already managed
+  for (const [shortId, managedTab] of managedTabs) {
+    if (managedTab.tabId === tab.id) {
+      // Already managed, just make it active
+      activeTabId = shortId;
+      return;
+    }
+  }
+
+  // Take over this tab
+  const shortId = generateTabId();
+  managedTabs.set(shortId, {
+    tabId: tab.id,
+    url: tab.url || "about:blank",
+    title: tab.title || "Untitled",
+  });
+  activeTabId = shortId;
+  await enableOnTab(tab.id, shortId);
 });
 
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
