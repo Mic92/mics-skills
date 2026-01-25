@@ -1990,13 +1990,13 @@ function read(options = {}) {
     // Clone the document to avoid modifying the actual page
     const documentClone = d.cloneNode(true);
 
-    // Create Readability instance with options optimized for text extraction
-    const reader = new Readability(/** @type {Document} */ (documentClone), {
-      charThreshold: 100, // Lower threshold to capture more content
-    });
+    // Create Readability instance - use default charThreshold (500)
+    // which makes Readability retry with different strategies if initial
+    // extraction is too short
+    const reader = new Readability(/** @type {Document} */ (documentClone));
 
     article = reader.parse();
-    if (article && article.textContent && article.textContent.length > 100) {
+    if (article && article.textContent && article.textContent.length > 50) {
       break;
     }
   }
