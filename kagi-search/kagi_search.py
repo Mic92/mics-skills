@@ -434,7 +434,8 @@ class KagiSearch:
                 import re
 
                 # Match pattern like: [^1]: [Title](URL) (22%)
-                ref_pattern = r"\[\^\d+\]:\s*\[([^\]]+)\]\(([^)]+)\)\s*\((\d+)%\)"
+                # Use non-greedy match for URL with lookahead to handle URLs containing parentheses
+                ref_pattern = r"\[\^\d+\]:\s*\[([^\]]+)\]\((.+?)\)\s*\((\d+)%\)"
                 for match in re.finditer(ref_pattern, references_md):
                     references.append(
                         {
