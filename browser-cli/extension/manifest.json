@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Browser CLI Controller",
-  "version": "1.0.32",
+  "version": "1.0.34",
   "description": "Control your browser from the command line",
 
   "applications": {

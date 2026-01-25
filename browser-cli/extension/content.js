@@ -1858,6 +1858,16 @@ async function shot(path) {
 }
 
 /**
+ * Navigate the current tab to a URL
+ * Delegates to background script so navigation completes properly
+ * @param {string} url - URL to navigate to
+ * @returns {Promise<{url: string}>}
+ */
+async function go(url) {
+  return sendToBackground("go", { url });
+}
+
+/**
  * Create a new tab
  * @param {string} [url] - URL to open
  * @returns {Promise<{tabId: string, url: string}>} Tab info
@@ -2225,6 +2235,7 @@ async function handleExec(code) {
     "find",
     "wait",
     "read",
+    "go",
     // Background script functions
     "shot",
     "tab",
@@ -2246,6 +2257,7 @@ async function handleExec(code) {
     find,
     wait,
     read,
+    go,
     // Background script functions
     shot,
     tab,

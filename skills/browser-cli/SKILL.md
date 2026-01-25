@@ -110,15 +110,23 @@ await download(url, "invoice.pdf")  // Downloads to ~/Downloads/invoice.pdf
 EOF
 ```
 
-## Screenshots & Tabs
+## Navigation & Tabs
+
+```bash
+browser-cli <<'EOF'
+await go("https://example.com")   // Navigate current tab (use for scripts)
+await tab()                       // New tab
+await tab("https://example.com")  // New tab with URL (switches context)
+await tabs()                      // List all tabs
+EOF
+```
+
+## Screenshots
 
 ```bash
 browser-cli <<'EOF'
 await shot()                      // Screenshot, returns data URL
 await shot("/tmp/page.png")       // Screenshot to file
-await tab()                       // New tab
-await tab("https://example.com")  // New tab with URL
-await tabs()                      // List all tabs
 EOF
 ```
 

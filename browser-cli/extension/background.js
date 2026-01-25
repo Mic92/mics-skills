@@ -173,24 +173,58 @@ async function sendToContentScript(command, params = {}, targetTabId) {
 // ============================================================================
 
 /**
- * Navigate to URL
- * @param {string} url
- * @param {string} [tabId]
- * @returns {Promise<{message: string}>}
+ * Navigate a managed tab to a new URL and wait for load
+ * @param {string} url - URL to navigate to
+ * @param {string} [tabId] - Tab ID (defaults to active tab)
+ * @returns {Promise<{url: string}>}
  */
 async function navigate(url, tabId) {
-  const browserTabId = await getTargetTab(tabId);
-  await browser.tabs.update(browserTabId, { url });
-
-  const managedTabId = tabId || activeTabId;
-  if (managedTabId && managedTabs.has(managedTabId)) {
-    const managedTab = managedTabs.get(managedTabId);
-    if (managedTab) {
-      managedTab.url = url;
-    }
+  const targetId = tabId || activeTabId;
+  if (!targetId) {
+    throw new Error("No tab to navigate");
   }
 
-  return { message: `Navigated to ${url}` };
+  const managedTab = managedTabs.get(targetId);
+  if (!managedTab) {
+    throw new Error(`Tab ${targetId} not found`);
+  }
+
+  const browserTabId = managedTab.tabId;
+
+  // Navigate the tab
+  await browser.tabs.update(browserTabId, { url });
+
+  // Wait for page to load
+  /** @type {Promise<void>} */
+  const loadPromise = new Promise((resolve) => {
+    /**
+     * @param {number} updatedTabId
+     * @param {{status?: string}} changeInfo
+     */
+    function listener(updatedTabId, changeInfo) {
+      if (updatedTabId === browserTabId && changeInfo.status === "complete") {
+        browser.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    }
+    browser.tabs.onUpdated.addListener(listener);
+
+    // Timeout after 30 seconds
+    setTimeout(() => {
+      browser.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }, 30_000);
+  });
+
+  await loadPromise;
+
+  // Update stored URL
+  managedTab.url = url;
+
+  // Re-inject content script
+  await enableOnTab(browserTabId, targetId);
+
+  return { url };
 }
 
 /**
@@ -457,6 +491,13 @@ async function handleCommand(message) {
         result = await createNewTab(params.url);
         break;
       }
+      case "go": {
+        if (!params.url) {
+          throw new Error("go requires a URL");
+        }
+        result = await navigate(params.url, tabId);
+        break;
+      }
       case "close-tab": {
         result = await closeTab(params.tabId || tabId);
         break;
@@ -677,6 +718,10 @@ browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
           }
           case "new-tab": {
             result = await createNewTab(params.url);
+            break;
+          }
+          case "go": {
+            result = await navigate(params.url, senderTabShortId);
             break;
           }
           case "close-tab": {
