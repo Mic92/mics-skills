@@ -12,10 +12,10 @@ import logging.handlers
 import os
 import signal
 import sys
-import tempfile
 from pathlib import Path
 
 from browser_cli.bridge import NativeMessagingBridge
+from browser_cli.paths import get_socket_path
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +63,8 @@ async def async_main() -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, signal_handler)
 
-    # Get runtime directory for Unix socket
-    runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
-    if not runtime_dir:
-        runtime_dir = tempfile.gettempdir()
-
-    socket_path = Path(runtime_dir) / "browser-cli.sock"
+    # Get secure socket path
+    socket_path = get_socket_path()
 
     # Run bridge until stopped
     bridge_task = asyncio.create_task(bridge.start(socket_path))

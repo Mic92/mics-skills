@@ -121,8 +121,52 @@ def _format_diff(result: dict[str, Any]) -> str | None:
     return "\n".join(lines)
 
 
+def _format_reader_result(result: dict[str, Any]) -> str | None:
+    """Format a reader mode result for display. Returns None if not a reader result."""
+    # Reader mode results have: title, content, length (required)
+    # Optional: byline, siteName, publishedTime
+    if "content" not in result or "length" not in result:
+        return None
+
+    # Must have content as a string (not elements array like snapshot)
+    if not isinstance(result.get("content"), str):
+        return None
+
+    lines: list[str] = []
+
+    # Header with metadata
+    if result.get("title"):
+        lines.append(result["title"])
+        lines.append("=" * len(result["title"]))
+
+    if result.get("byline"):
+        lines.append(f"By: {result['byline']}")
+
+    if result.get("siteName"):
+        lines.append(f"Source: {result['siteName']}")
+
+    if result.get("publishedTime"):
+        lines.append(f"Published: {result['publishedTime']}")
+
+    # Add separator before content if we had any metadata
+    if lines:
+        lines.append("")
+        lines.append("-" * 40)
+        lines.append("")
+
+    # Main content
+    lines.append(result["content"])
+
+    return "\n".join(lines)
+
+
 def _format_snapshot_dict(result: dict[str, Any]) -> str | None:
     """Format a snapshot dict for display. Returns None if not a snapshot."""
+    # Check if it's a reader mode result
+    reader_result = _format_reader_result(result)
+    if reader_result is not None:
+        return reader_result
+
     # Check if it's a SnapshotDiff object
     diff_result = _format_diff(result)
     if diff_result is not None:
@@ -183,6 +227,13 @@ async def exec_js(tab_id: str | None, code: str, socket: str | None) -> None:
     result = await client.exec_js(code, tab_id)
     if result is not None:
         print(format_snapshot(result))
+
+
+async def navigate_tab(tab_id: str | None, url: str, socket: str | None) -> None:
+    """Navigate a tab to a URL and wait for load."""
+    client = BrowserClient(socket)
+    await client.send_command("go", {"url": url}, tab_id)
+    print(f"Navigated to {url}")
 
 
 async def list_tabs(socket: str | None) -> None:
@@ -289,6 +340,11 @@ Available JS API:
         help="Unix socket path (default: $XDG_RUNTIME_DIR/browser-cli.sock)",
     )
     parser.add_argument(
+        "--go",
+        metavar="URL",
+        help="Navigate the tab to URL and wait for load",
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug logging",
@@ -310,6 +366,8 @@ def main() -> None:
             install_native_host()
         elif args.list:
             asyncio.run(list_tabs(args.socket))
+        elif args.go:
+            asyncio.run(navigate_tab(args.tab_id, args.go, args.socket))
         elif args.tab_id or not sys.stdin.isatty():
             code = sys.stdin.read()
             if not code.strip():

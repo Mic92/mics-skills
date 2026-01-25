@@ -56,7 +56,9 @@ function generateTabId() {
  * Connect to native messaging host
  */
 function connectNativeHost() {
-  if (nativePort) return;
+  if (nativePort) {
+    return;
+  }
 
   console.log("Connecting to native messaging host...");
 
@@ -171,22 +173,58 @@ async function sendToContentScript(command, params = {}, targetTabId) {
 // ============================================================================
 
 /**
- * Navigate to URL
- * @param {string} url
- * @param {string} [tabId]
- * @returns {Promise<{message: string}>}
+ * Navigate a managed tab to a new URL and wait for load
+ * @param {string} url - URL to navigate to
+ * @param {string} [tabId] - Tab ID (defaults to active tab)
+ * @returns {Promise<{url: string}>}
  */
 async function navigate(url, tabId) {
-  const browserTabId = await getTargetTab(tabId);
-  await browser.tabs.update(browserTabId, { url });
-
-  const managedTabId = tabId || activeTabId;
-  if (managedTabId && managedTabs.has(managedTabId)) {
-    const managedTab = managedTabs.get(managedTabId);
-    if (managedTab) managedTab.url = url;
+  const targetId = tabId || activeTabId;
+  if (!targetId) {
+    throw new Error("No tab to navigate");
   }
 
-  return { message: `Navigated to ${url}` };
+  const managedTab = managedTabs.get(targetId);
+  if (!managedTab) {
+    throw new Error(`Tab ${targetId} not found`);
+  }
+
+  const browserTabId = managedTab.tabId;
+
+  // Navigate the tab
+  await browser.tabs.update(browserTabId, { url });
+
+  // Wait for page to load
+  /** @type {Promise<void>} */
+  const loadPromise = new Promise((resolve) => {
+    /**
+     * @param {number} updatedTabId
+     * @param {{status?: string}} changeInfo
+     */
+    function listener(updatedTabId, changeInfo) {
+      if (updatedTabId === browserTabId && changeInfo.status === "complete") {
+        browser.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    }
+    browser.tabs.onUpdated.addListener(listener);
+
+    // Timeout after 30 seconds
+    setTimeout(() => {
+      browser.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }, 30_000);
+  });
+
+  await loadPromise;
+
+  // Update stored URL
+  managedTab.url = url;
+
+  // Re-inject content script
+  await enableOnTab(browserTabId, targetId);
+
+  return { url };
 }
 
 /**
@@ -246,6 +284,7 @@ async function saveScreenshotToFile(dataUrl, outputPath) {
     }, 30_000);
 
     messageHandlers[messageId] = {
+      /** @param {{success?: boolean, result?: {screenshot_path: string, message: string}, error?: string}} response */
       resolve: (response) => {
         clearTimeout(timeout);
         if (response.success && response.result) {
@@ -254,11 +293,17 @@ async function saveScreenshotToFile(dataUrl, outputPath) {
           reject(new Error(response.error || "Failed to save screenshot"));
         }
       },
+      /** @param {Error} error */
       reject: (error) => {
         clearTimeout(timeout);
         reject(error);
       },
     };
+
+    if (!nativePort) {
+      reject(new Error("Native messaging disconnected"));
+      return;
+    }
 
     nativePort.postMessage({
       command: "save-screenshot",
@@ -295,7 +340,9 @@ async function listTabs() {
       });
     } catch {
       managedTabs.delete(shortId);
-      if (activeTabId === shortId) activeTabId = undefined;
+      if (activeTabId === shortId) {
+        activeTabId = undefined;
+      }
     }
   }
 
@@ -444,6 +491,13 @@ async function handleCommand(message) {
         result = await createNewTab(params.url);
         break;
       }
+      case "go": {
+        if (!params.url) {
+          throw new Error("go requires a URL");
+        }
+        result = await navigate(params.url, tabId);
+        break;
+      }
       case "close-tab": {
         result = await closeTab(params.tabId || tabId);
         break;
@@ -485,6 +539,8 @@ async function handleCommand(message) {
  * @param {string} shortId
  */
 async function enableOnTab(tabId, shortId) {
+  // Inject Readability.js first, then content.js
+  await browser.tabs.executeScript(tabId, { file: "Readability.js" });
   await browser.tabs.executeScript(tabId, { file: "content.js" });
 
   await browser.tabs.executeScript(tabId, {
@@ -561,7 +617,9 @@ async function enableOnTab(tabId, shortId) {
  */
 async function disableOnTab(tabId, shortId) {
   managedTabs.delete(shortId);
-  if (activeTabId === shortId) activeTabId = undefined;
+  if (activeTabId === shortId) {
+    activeTabId = undefined;
+  }
 
   await browser.tabs.executeScript(tabId, {
     code: `(${function () {
@@ -662,6 +720,10 @@ browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
             result = await createNewTab(params.url);
             break;
           }
+          case "go": {
+            result = await navigate(params.url, senderTabShortId);
+            break;
+          }
           case "close-tab": {
             result = await closeTab(params.tabId || senderTabShortId);
             break;
@@ -716,14 +778,40 @@ browser.tabs.onRemoved.addListener((tabId) => {
   for (const [shortId, tab] of managedTabs) {
     if (tab.tabId === tabId) {
       managedTabs.delete(shortId);
-      if (activeTabId === shortId) activeTabId = undefined;
+      if (activeTabId === shortId) {
+        activeTabId = undefined;
+      }
       break;
     }
   }
 });
 
-browser.browserAction.onClicked.addListener(async () => {
-  await createNewTab();
+browser.browserAction.onClicked.addListener(async (tab) => {
+  // Take over the current tab instead of creating a new one
+  if (tab.id === undefined) {
+    // Fallback to creating a new tab if no current tab
+    await createNewTab();
+    return;
+  }
+
+  // Check if this tab is already managed
+  for (const [shortId, managedTab] of managedTabs) {
+    if (managedTab.tabId === tab.id) {
+      // Already managed, just make it active
+      activeTabId = shortId;
+      return;
+    }
+  }
+
+  // Take over this tab
+  const shortId = generateTabId();
+  managedTabs.set(shortId, {
+    tabId: tab.id,
+    url: tab.url || "about:blank",
+    title: tab.title || "Untitled",
+  });
+  activeTabId = shortId;
+  await enableOnTab(tab.id, shortId);
 });
 
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {

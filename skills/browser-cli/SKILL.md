@@ -57,10 +57,38 @@ snap({forms: true})       // Only form elements
 snap({links: true})       // Only links
 snap({buttons: true})     // Only buttons
 snap({text: "login"})     // Elements containing "login"
-diff()                    // Show changes since last snap
 logs()                    // Get console logs
 EOF
 ```
+
+## Reader Mode (Article Extraction)
+
+Extract readable article content using Mozilla Readability. Returns plain text
+optimized for LLM consumption.
+
+```bash
+# Navigate and read article in one go
+browser-cli TABID --go "https://example.com/article" && browser-cli TABID <<< 'read()'
+
+# Options
+read({maxLength: 5000})        // Limit content length
+read({includeMetadata: false}) // Skip title/byline/etc
+```
+
+Output:
+
+```
+Article Title
+=============
+By: John Doe
+Source: Example News
+
+----------------------------------------
+
+Full article text...
+```
+
+Returns empty output if page content is not suitable for reader mode.
 
 ## Waiting
 
@@ -82,15 +110,30 @@ await download(url, "invoice.pdf")  // Downloads to ~/Downloads/invoice.pdf
 EOF
 ```
 
-## Screenshots & Tabs
+## Navigation & Tabs
+
+```bash
+# Navigate current tab to URL (waits for load)
+browser-cli TABID --go "https://example.com"
+
+# Then run commands on the loaded page
+browser-cli TABID <<< "read()"
+
+# Open new tab (note: switches execution context)
+browser-cli <<'EOF'
+await tab("https://example.com")
+EOF
+
+# List all tabs
+browser-cli <<< "await tabs()"
+```
+
+## Screenshots
 
 ```bash
 browser-cli <<'EOF'
 await shot()                      // Screenshot, returns data URL
 await shot("/tmp/page.png")       // Screenshot to file
-await tab()                       // New tab
-await tab("https://example.com")  // New tab with URL
-await tabs()                      // List all tabs
 EOF
 ```
 

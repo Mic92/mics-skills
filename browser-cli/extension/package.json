@@ -6,8 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "typecheck": "tsc --project ./jsconfig.json --noEmit",
-    "lint": "eslint *.js",
-    "lint:fix": "eslint *.js --fix",
+    "lint": "eslint --no-warn-ignored *.js",
+    "lint:fix": "eslint --no-warn-ignored *.js --fix",
     "start": "web-ext run",
     "build": "web-ext build"
   },
