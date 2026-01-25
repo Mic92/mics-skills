@@ -229,6 +229,13 @@ async def exec_js(tab_id: str | None, code: str, socket: str | None) -> None:
         print(format_snapshot(result))
 
 
+async def navigate_tab(tab_id: str | None, url: str, socket: str | None) -> None:
+    """Navigate a tab to a URL and wait for load."""
+    client = BrowserClient(socket)
+    await client.send_command("go", {"url": url}, tab_id)
+    print(f"Navigated to {url}")
+
+
 async def list_tabs(socket: str | None) -> None:
     """List all managed tabs."""
     client = BrowserClient(socket)
@@ -333,6 +340,11 @@ Available JS API:
         help="Unix socket path (default: $XDG_RUNTIME_DIR/browser-cli.sock)",
     )
     parser.add_argument(
+        "--go",
+        metavar="URL",
+        help="Navigate the tab to URL and wait for load",
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug logging",
@@ -354,6 +366,8 @@ def main() -> None:
             install_native_host()
         elif args.list:
             asyncio.run(list_tabs(args.socket))
+        elif args.go:
+            asyncio.run(navigate_tab(args.tab_id, args.go, args.socket))
         elif args.tab_id or not sys.stdin.isatty():
             code = sys.stdin.read()
             if not code.strip():
