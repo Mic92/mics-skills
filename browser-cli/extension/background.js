@@ -250,6 +250,7 @@ async function saveScreenshotToFile(dataUrl, outputPath) {
     }, 30_000);
 
     messageHandlers[messageId] = {
+      /** @param {{success?: boolean, result?: {screenshot_path: string, message: string}, error?: string}} response */
       resolve: (response) => {
         clearTimeout(timeout);
         if (response.success && response.result) {
@@ -258,11 +259,17 @@ async function saveScreenshotToFile(dataUrl, outputPath) {
           reject(new Error(response.error || "Failed to save screenshot"));
         }
       },
+      /** @param {Error} error */
       reject: (error) => {
         clearTimeout(timeout);
         reject(error);
       },
     };
+
+    if (!nativePort) {
+      reject(new Error("Native messaging disconnected"));
+      return;
+    }
 
     nativePort.postMessage({
       command: "save-screenshot",
