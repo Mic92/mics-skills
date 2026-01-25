@@ -1960,6 +1960,85 @@ function fixSVGElements(doc) {
 }
 
 /**
+ * Find elements that are hidden via computed styles
+ * Must be called on live document before cloning to access computed styles
+ * @param {Document} doc - The document to analyze
+ * @returns {Set<Element>} Set of elements that are hidden
+ */
+function findHiddenElements(doc) {
+  const hidden = new Set();
+
+  for (const el of doc.body.querySelectorAll("*")) {
+    try {
+      const style = window.getComputedStyle(el);
+      if (style.display === "none" || style.visibility === "hidden") {
+        hidden.add(el);
+      }
+    } catch {
+      // Skip elements that can't be styled
+    }
+  }
+
+  return hidden;
+}
+
+/**
+ * Get DOM path to element as array of child indices
+ * @param {Element} el
+ * @param {Document} doc
+ * @returns {number[]}
+ */
+function getElementPath(el, doc) {
+  const path = [];
+  let current = el;
+  while (current && current !== doc.body) {
+    const parent = current.parentElement;
+    if (!parent) {
+      break;
+    }
+    const index = [...parent.children].indexOf(current);
+    path.unshift(index);
+    current = parent;
+  }
+  return path;
+}
+
+/**
+ * Get element by DOM path
+ * @param {number[]} path
+ * @param {Document} doc
+ * @returns {Element|null}
+ */
+function getElementByPath(path, doc) {
+  /** @type {Element|null} */
+  let current = doc.body;
+  for (const index of path) {
+    if (!current || !current.children[index]) {
+      // eslint-disable-next-line unicorn/no-null
+      return null;
+    }
+    current = current.children[index];
+  }
+  return current;
+}
+
+/**
+ * Remove hidden elements from cloned document
+ * @param {Document} clonedDoc - The cloned document to clean
+ * @param {Set<Element>} hiddenElements - Elements from original doc that were hidden
+ * @param {Document} originalDoc - The original document for path matching
+ */
+function removeHiddenFromClone(clonedDoc, hiddenElements, originalDoc) {
+  for (const el of hiddenElements) {
+    const path = getElementPath(el, originalDoc);
+    const clonedEl = getElementByPath(path, clonedDoc);
+    if (clonedEl) {
+      clonedEl.remove();
+    }
+  }
+}
+
+/**
  * Extract readable article content from the page using Mozilla Readability
  * Optimized for LLM consumption - returns plain text to minimize tokens
  * @param {ReadOptions} [options] - Options for extraction
@@ -1987,13 +2066,19 @@ function read(options = {}) {
 
   // Try each document until we find readable content
   for (const d of docs) {
+    // Find hidden elements before cloning (need computed styles from live doc)
+    const hiddenElements = findHiddenElements(d);
+
     // Clone the document to avoid modifying the actual page
-    const documentClone = d.cloneNode(true);
+    const documentClone = /** @type {Document} */ (d.cloneNode(true));
+
+    // Remove hidden elements from clone
+    removeHiddenFromClone(documentClone, hiddenElements, d);
 
     // Create Readability instance - use default charThreshold (500)
     // which makes Readability retry with different strategies if initial
     // extraction is too short
-    const reader = new Readability(/** @type {Document} */ (documentClone));
+    const reader = new Readability(documentClone);
 
     article = reader.parse();
     if (article && article.textContent && article.textContent.length > 50) {
