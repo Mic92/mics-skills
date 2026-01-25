@@ -78,18 +78,18 @@ EOF
 
 Output:
 
-```json
-{
-  "title": "Article Title",
-  "byline": "John Doe",
-  "siteName": "Example News",
-  "excerpt": "Brief description...",
-  "content": "Full article text...",
-  "length": 12345
-}
+```
+Article Title
+=============
+By: John Doe
+Source: Example News
+
+----------------------------------------
+
+Full article text...
 ```
 
-Returns `null` if page content is not suitable for reader mode.
+Returns empty output if page content is not suitable for reader mode.
 
 ## Waiting
 

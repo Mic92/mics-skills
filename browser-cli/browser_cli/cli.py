@@ -121,8 +121,52 @@ def _format_diff(result: dict[str, Any]) -> str | None:
     return "\n".join(lines)
 
 
+def _format_reader_result(result: dict[str, Any]) -> str | None:
+    """Format a reader mode result for display. Returns None if not a reader result."""
+    # Reader mode results have: title, content, length (required)
+    # Optional: byline, siteName, publishedTime
+    if "content" not in result or "length" not in result:
+        return None
+
+    # Must have content as a string (not elements array like snapshot)
+    if not isinstance(result.get("content"), str):
+        return None
+
+    lines: list[str] = []
+
+    # Header with metadata
+    if result.get("title"):
+        lines.append(result["title"])
+        lines.append("=" * len(result["title"]))
+
+    if result.get("byline"):
+        lines.append(f"By: {result['byline']}")
+
+    if result.get("siteName"):
+        lines.append(f"Source: {result['siteName']}")
+
+    if result.get("publishedTime"):
+        lines.append(f"Published: {result['publishedTime']}")
+
+    # Add separator before content if we had any metadata
+    if lines:
+        lines.append("")
+        lines.append("-" * 40)
+        lines.append("")
+
+    # Main content
+    lines.append(result["content"])
+
+    return "\n".join(lines)
+
+
 def _format_snapshot_dict(result: dict[str, Any]) -> str | None:
     """Format a snapshot dict for display. Returns None if not a snapshot."""
+    # Check if it's a reader mode result
+    reader_result = _format_reader_result(result)
+    if reader_result is not None:
+        return reader_result
+
     # Check if it's a SnapshotDiff object
     diff_result = _format_diff(result)
     if diff_result is not None:
