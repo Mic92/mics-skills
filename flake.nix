@@ -39,6 +39,7 @@
           packages = {
             browser-cli = pkgs.python3.pkgs.callPackage ./browser-cli { };
             browser-cli-extension = (pkgs.callPackages ./firefox-extensions { }).browser-cli-extension;
+            context7-cli = pkgs.python3.pkgs.callPackage ./context7-cli { };
             db-cli = pkgs.callPackage ./db-cli { };
             gmaps-cli = pkgs.python3.pkgs.callPackage ./gmaps-cli { };
             kagi-search = pkgs.python3.pkgs.callPackage ./kagi-search { };
@@ -72,6 +73,7 @@
                   websockets
                 ];
               };
+              "context7-cli" = { };
               "kagi-search" = {
                 extraPythonPackages = with pkgs.python3.pkgs; [
                   beautifulsoup4
