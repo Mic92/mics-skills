@@ -57,7 +57,6 @@ snap({forms: true})       // Only form elements
 snap({links: true})       // Only links
 snap({buttons: true})     // Only buttons
 snap({text: "login"})     // Elements containing "login"
-diff()                    // Show changes since last snap
 logs()                    // Get console logs
 EOF
 ```
