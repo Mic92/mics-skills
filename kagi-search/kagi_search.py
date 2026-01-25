@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 from urllib.error import URLError, HTTPError
 from http.cookiejar import CookieJar
 import gzip
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import time
 from dataclasses import dataclass
 import argparse
@@ -272,7 +272,7 @@ class KagiSearch:
 
                 # Find results container
                 results_box = soup.find(class_="results-box")
-                if not results_box:
+                if not results_box or isinstance(results_box, str):
                     if attempt < max_retries - 1:
                         time.sleep(retry_delay)
                         continue
@@ -280,7 +280,9 @@ class KagiSearch:
 
                 # Extract search results
                 results = []
-                search_results = results_box.find_all(class_="search-result")  # type: ignore
+                if not isinstance(results_box, Tag):
+                    raise Exception("Results box is not a Tag element")
+                search_results = results_box.find_all(class_="search-result")
 
                 for result in search_results[:limit]:
                     # Extract title
@@ -306,7 +308,8 @@ class KagiSearch:
                     if url_box:
                         link = url_box.find("a", href=True)
                         if link:
-                            url = link["href"]
+                            href = link.get("href", "")
+                            url = str(href) if href else ""
 
                     # Extract snippet
                     desc_elem = result.find(class_="__sri-desc")
@@ -329,6 +332,13 @@ class KagiSearch:
 
         return []
 
+    def _get_session_cookie(self) -> str:
+        """Extract kagi_session cookie value for X-Kagi-Authorization header."""
+        for cookie in self.cookie_jar:
+            if cookie.name == "kagi_session":
+                return str(cookie.value) if cookie.value else ""
+        return ""
+
     def get_quick_answer(self, query: str) -> Optional[QuickAnswer]:
         """
         Get Kagi Quick Answer for a query.
@@ -339,25 +349,31 @@ class KagiSearch:
         Returns:
             QuickAnswer object or None if no answer available
         """
-        # Construct Quick Answer URL
-        params = {"q": query, "stream": "1"}
+        # Construct Quick Answer URL - POST request with query in URL
+        params = {"q": query}
         quick_answer_url = f"{self.base_url}/mother/context?{urlencode(params)}"
         logger.debug(f"Quick Answer URL: {quick_answer_url}")
         logger.info("Fetching Quick Answer...")
 
         try:
-            # Create request with headers
-            request = Request(quick_answer_url)
+            # Get session cookie for authorization header
+            session_cookie = self._get_session_cookie()
+
+            # Create POST request with headers matching the working curl command
+            request = Request(quick_answer_url, data=b"", method="POST")
             request.add_header("User-Agent", self.user_agent)
             request.add_header("Accept", "application/vnd.kagi.stream")
             request.add_header("Accept-Language", "en-US,en;q=0.5")
-            request.add_header("Accept-Encoding", "gzip, deflate, br, zstd")
-            request.add_header("Referer", f"{self.base_url}/search?q={query}")
-            request.add_header("DNT", "1")
+            request.add_header("Accept-Encoding", "gzip, deflate")
+            request.add_header("Referer", f"{self.base_url}/search?{urlencode(params)}")
+            request.add_header("Origin", self.base_url)
             request.add_header("Connection", "keep-alive")
+            request.add_header("Content-Length", "0")
+            if session_cookie:
+                request.add_header("X-Kagi-Authorization", session_cookie)
 
             # Make request using opener (with cookies)
-            logger.debug("Making Quick Answer request...")
+            logger.debug("Making Quick Answer POST request...")
             response = self.opener.open(request, timeout=30)
             logger.debug(f"Response status: {response.getcode()}")
 
@@ -376,51 +392,67 @@ class KagiSearch:
                 logger.debug("Decompressing gzip content")
                 content = gzip.decompress(content)
 
-            # Parse streaming response - split by null bytes
-            messages = content.decode("utf-8").split("\x00")
-            logger.debug(f"Response has {len(messages)} messages")
+            # Parse streaming response - lines with prefixes like "hi:", "tokens.json:", "new_message.json:"
+            content_str = content.decode("utf-8")
+            lines = content_str.strip().split("\n")
+            logger.debug(f"Response has {len(lines)} lines")
+
             final_data = None
 
-            for message in messages:
-                if message.strip():
-                    logger.debug(f"Processing message: {message[:100]}...")  # Log first 100 chars
-                    # Each message starts with "update:" or "final:"
-                    if message.startswith("final:"):
-                        json_str = message[6:]  # Remove "final:" prefix
-                        logger.debug(f"Parsing final JSON: {json_str[:200]}...")
-                        try:
-                            final_data = json.loads(json_str)
-                            logger.debug("Successfully parsed final data")
-                        except json.JSONDecodeError as e:
-                            logger.error(f"Failed to parse final JSON: {e}")
-                            logger.debug(f"Full message: {message}")
-                        break
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                logger.debug(f"Processing line: {line[:100]}...")  # Log first 100 chars
+
+                # Look for the new_message.json line which contains the final answer
+                if line.startswith("new_message.json:"):
+                    json_str = line[len("new_message.json:") :]
+                    logger.debug(f"Parsing new_message JSON: {json_str[:200]}...")
+                    try:
+                        # Use JSONDecoder to parse only the first JSON object
+                        # This handles cases where there's trailing data after the JSON
+                        decoder = json.JSONDecoder()
+                        final_data, _ = decoder.raw_decode(json_str)
+                        logger.debug("Successfully parsed new_message data")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to parse new_message JSON: {e}")
+                        logger.debug(f"Full line: {line}")
 
             if not final_data:
-                logger.debug("No final data found in response")
+                logger.debug("No new_message data found in response")
                 return None
 
-            if "output_data" not in final_data:
-                logger.debug(f"No output_data in final response: {final_data.keys()}")
-                return None
+            # New response format has fields: md, reply, references_md, etc.
+            markdown = final_data.get("md", "")
+            html = final_data.get("reply", "")
+            references_md = final_data.get("references_md", "")
 
-            output_data = final_data["output_data"]
+            # Parse references from references_md (format: [^1]: [Title](URL) (percent%))
+            references = []
+            if references_md:
+                import re
 
-            # Extract data with defaults
-            html = final_data.get("output_text", "")
-            markdown = output_data.get("markdown", "")
-            raw_text = output_data.get("raw_text", "")
-            references = output_data.get("references", [])
+                # Match pattern like: [^1]: [Title](URL) (22%)
+                ref_pattern = r"\[\^\d+\]:\s*\[([^\]]+)\]\(([^)]+)\)\s*\((\d+)%\)"
+                for match in re.finditer(ref_pattern, references_md):
+                    references.append(
+                        {
+                            "title": match.group(1),
+                            "url": match.group(2),
+                            "contribution": f"{match.group(3)}%",
+                        }
+                    )
 
             # If no content, return None
-            if not html and not markdown and not raw_text:
+            if not html and not markdown:
                 logger.debug("No content found in Quick Answer")
                 return None
 
             logger.debug(f"Quick Answer found with {len(references)} references")
 
             return QuickAnswer(
-                html=html, markdown=markdown, raw_text=raw_text, references=references
+                html=html, markdown=markdown, raw_text=markdown, references=references
             )
 
         except Exception as e:
@@ -429,7 +461,7 @@ class KagiSearch:
             return None
 
 
-def main():
+def main() -> None:
     """Main entry point for command line usage."""
     parser = argparse.ArgumentParser(description="Search Kagi using session token")
     parser.add_argument("query", nargs="?", help="Search query")
@@ -476,7 +508,7 @@ def main():
 
     # Output results
     if args.json:
-        output = {
+        output: Dict[str, Any] = {
             "results": [{"title": r.title, "url": r.url, "snippet": r.snippet} for r in results]
         }
         if quick_answer:
