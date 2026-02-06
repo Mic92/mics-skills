@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "screenshot-cli"
+version = "0.1.0"
+description = "Cross-platform screenshot CLI for macOS and KDE Wayland"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+screenshot-cli = "screenshot_cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["screenshot_cli.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
