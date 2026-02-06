@@ -44,6 +44,9 @@
             gmaps-cli = pkgs.python3.pkgs.callPackage ./gmaps-cli { };
             kagi-search = pkgs.python3.pkgs.callPackage ./kagi-search { };
             pexpect-cli = pkgs.callPackage ./pexpect-cli { };
+            screenshot-cli = pkgs.python3.pkgs.callPackage ./screenshot-cli {
+              spectacle = if pkgs.stdenv.hostPlatform.isLinux then pkgs.kdePackages.spectacle else null;
+            };
           };
 
           treefmt = {
@@ -74,6 +77,7 @@
                 ];
               };
               "context7-cli" = { };
+              "screenshot-cli" = { };
               "kagi-search" = {
                 extraPythonPackages = with pkgs.python3.pkgs; [
                   beautifulsoup4
