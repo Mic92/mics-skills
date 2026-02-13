@@ -47,6 +47,7 @@
             screenshot-cli = pkgs.python3.pkgs.callPackage ./screenshot-cli {
               spectacle = if pkgs.stdenv.hostPlatform.isLinux then pkgs.kdePackages.spectacle else null;
             };
+            weather-cli = pkgs.python3.pkgs.callPackage ./weather-cli { };
           };
 
           treefmt = {
@@ -84,6 +85,7 @@
                   types-beautifulsoup4
                 ];
               };
+              "weather-cli" = { };
             };
 
             settings.global.excludes = [
