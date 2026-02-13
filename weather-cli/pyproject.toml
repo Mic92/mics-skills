@@ -1,0 +1,19 @@
+[project]
+name = "weather-cli"
+version = "1.0.0"
+description = "CLI tool for weather forecasts using Bright Sky API (DWD/MOSMIX, worldwide)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+weather-cli = "weather_cli.main:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["weather_cli"]
+package-dir = {"" = "lib"}
