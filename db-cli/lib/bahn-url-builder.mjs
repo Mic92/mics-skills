@@ -25,27 +25,36 @@ function buildTimeParams(departure, arrival) {
   return [`hd=${isoDate}`, arrival ? "hza=A" : "hza=D"];
 }
 
-function buildAdditionalParams() {
+function buildAdditionalParams(deutschlandticket) {
+  const transportTypes = deutschlandticket
+    ? "vm=02,03,04,05,06,07,08,09" // Deutschlandticket: no ICE (00), no IC/EC (01)
+    : "vm=00,01,02,03,04,05,06,07,08,09"; // all transport types
   return [
     "hz=%5B%5D", // empty array
     "ar=false", // no arrival
     "s=true", // search
     "d=false", // no direct connections only
-    "vm=00,01,02,03,04,05,06,07,08,09", // all transport types
+    transportTypes,
     "fm=false", // no first minute
     "bp=false", // no best price
-    "dlt=false", // no Deutschland ticket
-    "dltv=false", // no Deutschland ticket variant
+    `dlt=${deutschlandticket ? "true" : "false"}`,
+    `dltv=${deutschlandticket ? "true" : "false"}`,
   ];
 }
 
-export default function generateBahnDeUrl(from, to, departure, arrival) {
+export default function generateBahnDeUrl(
+  from,
+  to,
+  departure,
+  arrival,
+  { deutschlandticket = false } = {},
+) {
   const baseUrl = "https://www.bahn.de/buchung/fahrplan/suche";
   const hashParams = [
     ...buildBasicParams(from, to),
     ...buildStationParams(from, to),
     ...buildTimeParams(departure, arrival),
-    ...buildAdditionalParams(),
+    ...buildAdditionalParams(deutschlandticket),
   ];
   return `${baseUrl}#${hashParams.join("&")}`;
 }
