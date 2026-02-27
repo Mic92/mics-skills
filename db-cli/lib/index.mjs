@@ -6,7 +6,14 @@ import { displayResults } from "./journey-display.mjs";
 import { handleStationSearch } from "./station-search.mjs";
 
 export async function searchJourneys(options) {
-  const { from, to, departure, arrival, results = 3 } = options;
+  const {
+    from,
+    to,
+    departure,
+    arrival,
+    results = 3,
+    deutschlandticket,
+  } = options;
 
   const client = createClient(dbProfile, "db-cli/1.0.0");
 
@@ -23,6 +30,22 @@ export async function searchJourneys(options) {
     stopovers: true,
     tickets: true,
   };
+
+  if (deutschlandticket) {
+    journeyOptions.products = {
+      nationalExpress: false, // no ICE
+      national: false, // no IC/EC
+      regionalExpress: true,
+      regional: true,
+      suburban: true,
+      bus: true,
+      ferry: true,
+      subway: true,
+      tram: true,
+      taxi: false,
+    };
+    console.log("Filtering for Deutschlandticket-compatible transport only");
+  }
 
   if (departure) {
     journeyOptions.departure = parseTime(departure);
@@ -55,6 +78,7 @@ export async function searchJourneys(options) {
     toLocation,
     journeyOptions.departure,
     journeyOptions.arrival,
+    { deutschlandticket },
   );
 
   // Display results

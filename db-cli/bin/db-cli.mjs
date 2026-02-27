@@ -17,6 +17,7 @@ Options:
   -d, --departure <time>   Departure time (ISO format or relative like "in 2 hours")
   -a, --arrival <time>     Arrival time (ISO format or relative like "by 18:00")
   -r, --results <number>   Number of results to show (default: 3)
+  -t, --deutschlandticket  Only show Deutschlandticket-compatible transport (no ICE/IC/EC)
   -h, --help              Show this help message
 
 Examples:
@@ -24,6 +25,7 @@ Examples:
   db-cli --departure "2024-12-25T14:00" Berlin München
   db-cli -d "in 30 minutes" "Hamburg Hbf" "Frankfurt Hbf"
   db-cli --arrival "18:00" Köln Stuttgart
+  db-cli -t "Berlin Hbf" "München Hbf"
 `;
 
 function parseCommandLineArgs() {
@@ -40,6 +42,10 @@ function parseCommandLineArgs() {
       type: "string",
       short: "r",
       default: "3",
+    },
+    deutschlandticket: {
+      type: "boolean",
+      short: "t",
     },
     help: {
       type: "boolean",
@@ -74,6 +80,7 @@ async function main() {
       departure: values.departure,
       arrival: values.arrival,
       results: parseInt(values.results, 10),
+      deutschlandticket: values.deutschlandticket,
     });
   } catch (error) {
     console.error(`Error: ${error.message}`);
