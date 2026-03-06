@@ -255,7 +255,7 @@ class NativeMessagingBridge:
         new_tab_id = f"auto_{msg_id}"
         new_tab_msg = {
             "command": "new-tab",
-            "params": {"url": "data:text/html,<h1>browser-cli</h1>"},
+            "params": {"url": "https://example.com"},
             "id": new_tab_id,
         }
         new_tab_future: asyncio.Future[Any] = asyncio.Future()
