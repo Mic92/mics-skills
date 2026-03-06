@@ -467,7 +467,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Search Kagi using session token")
     parser.add_argument("query", nargs="?", help="Search query")
     parser.add_argument(
-        "-n", "--num-results", type=int, default=10, help="Number of results (default: 10)"
+        "-n", "--num-results", type=int, default=3, help="Number of link results (default: 3)"
+    )
+    parser.add_argument(
+        "-l", "--links", action="store_true", help="Show search result links (hidden by default)"
     )
     parser.add_argument("-t", "--token", help="Session token (overrides config)")
     parser.add_argument("-c", "--config", help="Config file path")
@@ -500,7 +503,7 @@ def main() -> None:
 
     # Perform search
     try:
-        results = client.search(args.query, limit=args.num_results)
+        results = client.search(args.query, limit=args.num_results) if args.links else []
         quick_answer = client.get_quick_answer(args.query)
     except Exception as e:
         error_msg = colorize(f"Search failed: {e}", color="red", bold=True)
@@ -545,28 +548,35 @@ def main() -> None:
                     if ref_title and ref_url:
                         ref_link = hyperlink(ref_url, colorize(ref_title, color="blue"))
                         print(f"  {ref_num} {ref_link}")
+                        url_text = colorize(ref_url, color="green", dim=True)
+                        url_with_link = hyperlink(ref_url, url_text)
+                        print(f"      {url_with_link}")
 
             print(colorize("─" * 80, color="cyan", dim=True))
-            print()  # Extra newline before search results
-        for i, result in enumerate(results, 1):
-            # Result number in yellow/bold
-            number = colorize(f"{i}.", color="yellow", bold=True)
-            # Title in blue/bold with hyperlink
-            title = colorize(result.title, color="blue", bold=True)
-            title_with_link = hyperlink(result.url, title)
-            print(f"\n{number} {title_with_link}")
 
-            # URL in green with hyperlink
-            url_text = colorize(result.url, color="green")
-            url_with_link = hyperlink(result.url, url_text)
-            print(f"   {url_with_link}")
+        # Display search result links only when --links is passed
+        if results:
+            if quick_answer:
+                print()  # Extra newline after Quick Answer
+            for i, result in enumerate(results, 1):
+                # Result number in yellow/bold
+                number = colorize(f"{i}.", color="yellow", bold=True)
+                # Title in blue/bold with hyperlink
+                title = colorize(result.title, color="blue", bold=True)
+                title_with_link = hyperlink(result.url, title)
+                print(f"\n{number} {title_with_link}")
 
-            # Snippet in default color but dim
-            if result.snippet:
-                snippet = colorize(result.snippet, dim=True)
-                print(f"   {snippet}")
+                # URL in green with hyperlink
+                url_text = colorize(result.url, color="green")
+                url_with_link = hyperlink(result.url, url_text)
+                print(f"   {url_with_link}")
 
-    if not results and not args.json:
+                # Snippet in default color but dim
+                if result.snippet:
+                    snippet = colorize(result.snippet, dim=True)
+                    print(f"   {snippet}")
+
+    if not quick_answer and not results and not args.json:
         error_msg = colorize("No results found", color="red")
         print(error_msg, file=sys.stderr)
 
