@@ -249,7 +249,8 @@ class NativeMessagingBridge:
             data["tabId"] = self.latest_tab_id
             return True
 
-        # No tabs exist, create one
+        # No tabs exist, create a minimal one for content script injection.
+        # Uses a data: URI since about:blank blocks content scripts.
         logger.info("No managed tabs exist, creating a new tab")
         new_tab_id = f"auto_{msg_id}"
         new_tab_msg = {

@@ -53,6 +53,53 @@ nix run github:Mic92/mics-skills#weather-cli
 }
 ```
 
+### Using home-manager
+
+This flake provides a home-manager module that installs the CLI tools and
+symlinks the corresponding skill definitions into `~/.claude/skills/`. Claude
+Code and pi discover them automatically.
+
+Add the flake input and import the module:
+
+```nix
+# flake.nix
+{
+  inputs.mics-skills.url = "github:Mic92/mics-skills";
+}
+```
+
+```nix
+# home-manager configuration
+{ inputs, pkgs, ... }:
+{
+  imports = [ inputs.mics-skills.homeManagerModules.default ];
+
+  programs.mics-skills = {
+    enable = true;
+    package = inputs.mics-skills.packages.${pkgs.stdenv.hostPlatform.system};
+    skillsSrc = inputs.mics-skills;
+  };
+}
+```
+
+By default all skills are installed. To pick only the ones you need, set the
+`skills` option:
+
+```nix
+programs.mics-skills = {
+  enable = true;
+  package = inputs.mics-skills.packages.${pkgs.stdenv.hostPlatform.system};
+  skillsSrc = inputs.mics-skills;
+  skills = [
+    "kagi-search"
+    "pexpect-cli"
+    "screenshot-cli"
+  ];
+};
+```
+
+Only the selected CLI tools and their skill definitions will be installed.
+
 ## Development
 
 ```bash

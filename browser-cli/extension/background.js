@@ -514,6 +514,19 @@ async function handleCommand(message) {
         break;
       }
 
+      // Execute JavaScript on a specific tab (used for remote tab proxying)
+      case "exec-on-tab": {
+        if (!params.tabId) {
+          throw new Error("exec-on-tab requires tabId parameter");
+        }
+        result = await sendToContentScript(
+          "exec",
+          { code: params.code },
+          params.tabId,
+        );
+        break;
+      }
+
       default: {
         throw new Error(`Unknown command: ${command}`);
       }
@@ -734,6 +747,17 @@ browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
           }
           case "download": {
             result = await downloadFile(params.url, params.filename);
+            break;
+          }
+          case "exec-on-tab": {
+            if (!params.tabId) {
+              throw new Error("exec-on-tab requires tabId parameter");
+            }
+            result = await sendToContentScript(
+              "exec",
+              { code: params.code },
+              params.tabId,
+            );
             break;
           }
           default: {

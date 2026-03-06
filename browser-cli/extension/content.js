@@ -31,6 +31,14 @@ if (!window.__browserCliInjected) {
   /** @type {number} */
   const MAX_CONSOLE_LOGS = 1000;
 
+  /**
+   * Track the remote tab ID when tab() switches context.
+   * When set, API functions like snap(), click(), etc. delegate to this tab.
+   * @type {string|null}
+   */
+  // eslint-disable-next-line unicorn/no-null
+  let _remoteTabId = null;
+
   /** @type {HTMLDivElement|undefined} Virtual cursor element */
   let virtualCursor;
 
@@ -1864,6 +1872,18 @@ if (!window.__browserCliInjected) {
   }
 
   /**
+   * Execute JavaScript code on a remote tab via background script.
+   * Used to delegate API calls when tab() has switched context.
+   * @param {string} code - JavaScript code to execute
+   * @param {string} tabId - Target tab short ID
+   * @returns {Promise<any>} Result from the remote tab
+   */
+  async function execOnRemoteTab(code, tabId) {
+    const result = await sendToBackground("exec-on-tab", { code, tabId });
+    return result?.result;
+  }
+
+  /**
    * Take a screenshot
    * @param {string} [path] - Output file path
    * @returns {Promise<string>} Path to saved screenshot
@@ -1874,12 +1894,16 @@ if (!window.__browserCliInjected) {
   }
 
   /**
-   * Create a new tab
+   * Create a new tab and switch execution context to it.
+   * After calling tab(), subsequent API calls (snap, click, etc.)
+   * will execute on the new tab.
    * @param {string} [url] - URL to open
    * @returns {Promise<{tabId: string, url: string}>} Tab info
    */
   async function tab(url) {
     const result = await sendToBackground("new-tab", { url });
+    // Switch execution context: subsequent API calls target the new tab
+    _remoteTabId = result.tabId;
     return { tabId: result.tabId, url: result.url };
   }
 
@@ -2229,9 +2253,45 @@ if (!window.__browserCliInjected) {
       }
     }
 
+    // Reset remote tab context at start of each exec
+    // eslint-disable-next-line unicorn/no-null
+    _remoteTabId = null;
+
+    /**
+     * Create a proxy for a content-script function that delegates to the
+     * remote tab when _remoteTabId is set (i.e., after tab() was called).
+     * @param {string} fnName - Function name as it appears in the API
+     * @param {Function} localFn - The local implementation
+     * @returns {Function} Proxied function
+     */
+    function proxyFn(fnName, localFn) {
+      return async function (...args) {
+        if (_remoteTabId) {
+          // Serialize the call and execute on the remote tab
+          const serializedArgs = JSON.stringify(args);
+          const remoteCode = `return ${fnName}(...${serializedArgs})`;
+          return execOnRemoteTab(remoteCode, _remoteTabId);
+        }
+        return localFn(...args);
+      };
+    }
+
+    // Create proxied versions of content-script functions
+    const pClick = proxyFn("click", click);
+    const pType = proxyFn("type", type);
+    const pHover = proxyFn("hover", hover);
+    const pDrag = proxyFn("drag", drag);
+    const pSelect = proxyFn("select", select);
+    const pKey = proxyFn("key", key);
+    const pSnap = proxyFn("snap", snap);
+    const pLogs = proxyFn("logs", logs);
+    const pFind = proxyFn("find", find);
+    const pWait = proxyFn("wait", wait);
+    const pRead = proxyFn("read", read);
+
     // Make API functions available in the execution context
     const fn = new AsyncFunction(
-      // Content script functions
+      // Content script functions (proxied)
       "click",
       "type",
       "hover",
@@ -2252,18 +2312,18 @@ if (!window.__browserCliInjected) {
     );
 
     const result = await fn(
-      // Content script functions
-      click,
-      type,
-      hover,
-      drag,
-      select,
-      key,
-      snap,
-      logs,
-      find,
-      wait,
-      read,
+      // Content script functions (proxied)
+      pClick,
+      pType,
+      pHover,
+      pDrag,
+      pSelect,
+      pKey,
+      pSnap,
+      pLogs,
+      pFind,
+      pWait,
+      pRead,
       // Background script functions
       shot,
       tab,
