@@ -11,5 +11,5 @@ pexpect-server = "pexpect_cli.server:main"
 pexpect-cli = "pexpect_cli.client:main"
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

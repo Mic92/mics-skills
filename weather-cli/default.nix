@@ -1,7 +1,7 @@
 {
   lib,
   buildPythonApplication,
-  setuptools,
+  hatchling,
 }:
 
 buildPythonApplication {
@@ -11,7 +11,7 @@ buildPythonApplication {
 
   src = ./.;
 
-  build-system = [ setuptools ];
+  build-system = [ hatchling ];
 
   meta = with lib; {
     description = "CLI tool for weather forecasts using Bright Sky API (DWD/MOSMIX, worldwide)";

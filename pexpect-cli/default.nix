@@ -10,8 +10,7 @@ python3.pkgs.buildPythonApplication {
   src = ./.;
 
   build-system = with python3.pkgs; [
-    setuptools
-    wheel
+    hatchling
   ];
 
   dependencies = with python3.pkgs; [ pexpect ];
