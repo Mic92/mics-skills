@@ -22,6 +22,8 @@
         inputs.treefmt-nix.flakeModule
       ];
 
+      flake.homeManagerModules.default = import ./home-manager.nix;
+
       perSystem =
         {
           pkgs,
