@@ -62,9 +62,9 @@ in
     # Symlink only the selected skill directories.
     home.file = lib.listToAttrs (
       map (name: {
-        inherit name;
+        name = ".claude/skills/${name}";
         value.source = "${cfg.skillsSrc}/skills/${name}";
-      }) (map (name: ".claude/skills/${name}") cfg.skills)
+      }) cfg.skills
     );
   };
 }
