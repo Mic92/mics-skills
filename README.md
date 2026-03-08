@@ -2,44 +2,28 @@
 
 A collection of CLI tools and skills designed to be useful for LLM agents.
 
-## Packages
+## Tools
 
-| Package                           | Description                                                     |
-| --------------------------------- | --------------------------------------------------------------- |
-| [browser-cli](browser-cli/)       | Control Firefox browser from the command line                   |
-| [context7-cli](context7-cli/)     | Fetch up-to-date library documentation from Context7            |
-| [db-cli](db-cli/)                 | Search Deutsche Bahn train connections                          |
-| [gmaps-cli](gmaps-cli/)           | Search for places and get directions using Google Maps          |
-| [kagi-search](kagi-search/)       | Search the web using Kagi with Quick Answer AI summaries        |
-| [pexpect-cli](pexpect-cli/)       | Persistent pexpect sessions for interactive terminal automation |
-| [screenshot-cli](screenshot-cli/) | Cross-platform screenshots for macOS and KDE Wayland            |
-| [tasker-cli](tasker-cli/)         | Deploy and trigger Android Tasker tasks via WebUI and adb       |
-| [weather-cli](weather-cli/)       | Weather forecasts worldwide via Bright Sky API (DWD/MOSMIX)     |
+| Tool                              | Description                                                     | Skill                                      |
+| --------------------------------- | --------------------------------------------------------------- | ------------------------------------------ |
+| [browser-cli](browser-cli/)       | Control Firefox browser from the command line                   | [SKILL.md](skills/browser-cli/SKILL.md)    |
+| [context7-cli](context7-cli/)     | Fetch up-to-date library documentation from Context7            | [SKILL.md](skills/context7-cli/SKILL.md)   |
+| [db-cli](db-cli/)                 | Search Deutsche Bahn train connections                          | [SKILL.md](skills/db-cli/SKILL.md)         |
+| [gmaps-cli](gmaps-cli/)           | Search for places and get directions using Google Maps          | [SKILL.md](skills/gmaps-cli/SKILL.md)      |
+| [kagi-search](kagi-search/)       | Search the web using Kagi with Quick Answer AI summaries        | [SKILL.md](skills/kagi-search/SKILL.md)    |
+| [pexpect-cli](pexpect-cli/)       | Persistent pexpect sessions for interactive terminal automation | [SKILL.md](skills/pexpect-cli/SKILL.md)    |
+| [screenshot-cli](screenshot-cli/) | Cross-platform screenshots for macOS and KDE Wayland            | [SKILL.md](skills/screenshot-cli/SKILL.md) |
+| [tasker-cli](tasker-cli/)         | Deploy and trigger Android Tasker tasks via WebUI and adb       | [SKILL.md](skills/tasker-cli/SKILL.md)     |
+| [weather-cli](weather-cli/)       | Weather forecasts worldwide via Bright Sky API (DWD/MOSMIX)     | [SKILL.md](skills/weather-cli/SKILL.md)    |
 
-## Skills
-
-The `skills/` directory contains Claude skill definitions for use with Claude
-Code or similar LLM coding assistants. Each skill provides usage examples and
-references the package README for setup instructions.
-
-| Skill                                            | Description                                       |
-| ------------------------------------------------ | ------------------------------------------------- |
-| [browser-cli](skills/browser-cli/SKILL.md)       | Web automation, scraping, testing                 |
-| [context7-cli](skills/context7-cli/SKILL.md)     | Library documentation and code examples           |
-| [db-cli](skills/db-cli/SKILL.md)                 | Train route and schedule search                   |
-| [gmaps-cli](skills/gmaps-cli/SKILL.md)           | Place search and directions                       |
-| [kagi-search](skills/kagi-search/SKILL.md)       | Web search with AI summaries                      |
-| [pexpect-cli](skills/pexpect-cli/SKILL.md)       | SSH, database, and interactive program automation |
-| [screenshot-cli](skills/screenshot-cli/SKILL.md) | Screenshot capture (macOS + KDE Wayland)          |
-| [tasker-cli](skills/tasker-cli/SKILL.md)         | Deploy and trigger Android Tasker tasks            |
-| [weather-cli](skills/weather-cli/SKILL.md)       | Weather forecasts worldwide (DWD/MOSMIX)          |
+The `skills/` directory contains skill definitions for Claude Code and pi.
+Each provides usage examples and references the package README for setup.
 
 ## Installation
 
 ### Using Nix Flakes
 
 ```bash
-# Run a tool directly
 nix run github:Mic92/mics-skills#browser-cli
 nix run github:Mic92/mics-skills#context7-cli
 nix run github:Mic92/mics-skills#db-cli
