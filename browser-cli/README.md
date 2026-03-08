@@ -14,10 +14,8 @@ Browser CLI consists of three components:
    extension
 3. **CLI Client** - Minimal command-line tool that executes JavaScript via stdin
 
-When no GUI browser is running, browser-cli automatically starts
-[browsh](https://www.brow.sh/) as a headless backend. Browsh runs a headless
-Firefox/LibreWolf instance that loads the browser-cli extension, providing the
-full API without needing a display.
+When no GUI browser is running and browsh is installed, browser-cli
+automatically starts it as a headless backend — no display needed.
 
 ## Installation
 
@@ -37,6 +35,7 @@ nix run github:Mic92/mics-skills#browser-cli -- --help
    - Select `manifest.json` from the `extension` directory
 
 2. **Install Native Messaging Host**
+
    ```bash
    browser-cli --install-host
    ```
@@ -57,6 +56,9 @@ When browser-cli can't connect to a running browser, it automatically starts
 [browsh](https://www.brow.sh/) as a headless backend. Browsh launches a
 headless Firefox/LibreWolf instance with the browser-cli extension loaded from
 its profile, giving full API access without a GUI.
+
+If browsh is not installed, browser-cli will report a connection error with
+instructions for either starting a GUI browser or installing browsh.
 
 ### Configuring the Browser Path
 
@@ -87,23 +89,6 @@ extension must be installed there:
 
 Once installed, the extension persists in browsh's profile and will load
 automatically on subsequent headless runs.
-
-### How It Works
-
-```
-browser-cli <<< 'snap()'
-  → tries Unix socket → no browser running
-  → spawns browsh via pty.fork()
-  → browsh starts headless Firefox/LibreWolf
-  → Firefox loads browser-cli extension from browsh's profile
-  → extension starts native messaging bridge → socket appears
-  → browser-cli retries → connects → full API available
-```
-
-Browsh requires a TTY, so browser-cli allocates a PTY via `pty.fork()` and
-drains its output in a background thread. The browsh process ignores SIGHUP
-so it survives after browser-cli exits, and subsequent browser-cli invocations
-reuse the running instance.
 
 ## Architecture
 
