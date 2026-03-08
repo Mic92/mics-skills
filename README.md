@@ -13,6 +13,7 @@ A collection of CLI tools and skills designed to be useful for LLM agents.
 | [kagi-search](kagi-search/)       | Search the web using Kagi with Quick Answer AI summaries        |
 | [pexpect-cli](pexpect-cli/)       | Persistent pexpect sessions for interactive terminal automation |
 | [screenshot-cli](screenshot-cli/) | Cross-platform screenshots for macOS and KDE Wayland            |
+| [tasker-cli](tasker-cli/)         | Deploy and trigger Android Tasker tasks via WebUI and adb       |
 | [weather-cli](weather-cli/)       | Weather forecasts worldwide via Bright Sky API (DWD/MOSMIX)     |
 
 ## Skills
@@ -30,6 +31,7 @@ references the package README for setup instructions.
 | [kagi-search](skills/kagi-search/SKILL.md)       | Web search with AI summaries                      |
 | [pexpect-cli](skills/pexpect-cli/SKILL.md)       | SSH, database, and interactive program automation |
 | [screenshot-cli](skills/screenshot-cli/SKILL.md) | Screenshot capture (macOS + KDE Wayland)          |
+| [tasker-cli](skills/tasker-cli/SKILL.md)         | Deploy and trigger Android Tasker tasks            |
 | [weather-cli](skills/weather-cli/SKILL.md)       | Weather forecasts worldwide (DWD/MOSMIX)          |
 
 ## Installation
@@ -45,6 +47,7 @@ nix run github:Mic92/mics-skills#gmaps-cli
 nix run github:Mic92/mics-skills#kagi-search
 nix run github:Mic92/mics-skills#pexpect-cli
 nix run github:Mic92/mics-skills#screenshot-cli
+nix run github:Mic92/mics-skills#tasker-cli
 nix run github:Mic92/mics-skills#weather-cli
 
 # Add to your flake inputs
