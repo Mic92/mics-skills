@@ -375,7 +375,7 @@ def get_directions(
         times: Optional tuple of (departure_time, arrival_time)
     """
     processor = DirectionsProcessor(api_key)
-    departure_time, arrival_time = times if times else (None, None)
+    departure_time, arrival_time = times or (None, None)
     return processor.get_directions(
         origin, destination, mode, departure_time, arrival_time
     )
@@ -552,7 +552,7 @@ class RouteProcessor:
                     total_minutes += int(parts[i - 1])
         else:
             # Just minutes
-            total_minutes = int(duration_str.split()[0])
+            total_minutes = int(duration_str.split(maxsplit=1)[0])
         return total_minutes
 
     def _print_departure_time_for_arrival(
