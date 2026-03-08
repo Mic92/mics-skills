@@ -1,0 +1,833 @@
+[
+  {
+    "method": "get_actions",
+    "args": {},
+    "result": []
+  },
+  {
+    "method": "append_action",
+    "args": {
+      "action": {
+        "action": {
+          "code": 548,
+          "args": [
+            {
+              "id": 0,
+              "value": "hello"
+            }
+          ]
+        }
+      }
+    },
+    "result": [
+      {
+        "args": [
+          {
+            "id": 0,
+            "name": "Text",
+            "value": "hello"
+          },
+          {
+            "id": 1,
+            "name": "Long",
+            "value": false
+          },
+          {
+            "id": 2,
+            "name": "Tasker Layout",
+            "value": false
+          },
+          {
+            "id": 3,
+            "name": "Title",
+            "value": ""
+          },
+          {
+            "id": 4,
+            "name": "Icon",
+            "value": ""
+          },
+          {
+            "id": 5,
+            "name": "Icon Size",
+            "value": ""
+          },
+          {
+            "id": 6,
+            "name": "Background Colour",
+            "value": ""
+          },
+          {
+            "id": 7,
+            "name": "Task",
+            "value": ""
+          },
+          {
+            "id": 8,
+            "name": "Timeout",
+            "value": ""
+          },
+          {
+            "id": 9,
+            "name": "Continue Task Immediately",
+            "value": false
+          },
+          {
+            "id": 10,
+            "name": "Text Colour",
+            "value": ""
+          },
+          {
+            "id": 11,
+            "name": "Dismiss On Click",
+            "value": false
+          },
+          {
+            "id": 12,
+            "name": "Show Over Everything",
+            "value": false
+          },
+          {
+            "id": 13,
+            "name": "Position",
+            "value": ""
+          },
+          {
+            "id": 14,
+            "name": "Use HTML",
+            "value": false
+          },
+          {
+            "id": 15,
+            "name": "ID",
+            "value": ""
+          }
+        ],
+        "blockProperties": {
+          "a": 0,
+          "b": 0,
+          "c": "None",
+          "g": false,
+          "h": false
+        },
+        "code": 548,
+        "helpId": "flash",
+        "name": "Flash"
+      }
+    ]
+  },
+  {
+    "method": "get_actions",
+    "args": {},
+    "result": [
+      {
+        "args": [
+          {
+            "id": 0,
+            "name": "Text",
+            "value": "hello"
+          },
+          {
+            "id": 1,
+            "name": "Long",
+            "value": false
+          },
+          {
+            "id": 2,
+            "name": "Tasker Layout",
+            "value": false
+          },
+          {
+            "id": 3,
+            "name": "Title",
+            "value": ""
+          },
+          {
+            "id": 4,
+            "name": "Icon",
+            "value": ""
+          },
+          {
+            "id": 5,
+            "name": "Icon Size",
+            "value": ""
+          },
+          {
+            "id": 6,
+            "name": "Background Colour",
+            "value": ""
+          },
+          {
+            "id": 7,
+            "name": "Task",
+            "value": ""
+          },
+          {
+            "id": 8,
+            "name": "Timeout",
+            "value": ""
+          },
+          {
+            "id": 9,
+            "name": "Continue Task Immediately",
+            "value": false
+          },
+          {
+            "id": 10,
+            "name": "Text Colour",
+            "value": ""
+          },
+          {
+            "id": 11,
+            "name": "Dismiss On Click",
+            "value": false
+          },
+          {
+            "id": 12,
+            "name": "Show Over Everything",
+            "value": false
+          },
+          {
+            "id": 13,
+            "name": "Position",
+            "value": ""
+          },
+          {
+            "id": 14,
+            "name": "Use HTML",
+            "value": false
+          },
+          {
+            "id": 15,
+            "name": "ID",
+            "value": ""
+          }
+        ],
+        "blockProperties": {
+          "a": 0,
+          "b": 548,
+          "c": "None",
+          "g": false,
+          "h": false
+        },
+        "code": 548,
+        "helpId": "flash",
+        "name": "Flash"
+      }
+    ]
+  },
+  {
+    "method": "get_actions",
+    "args": {},
+    "result": [
+      {
+        "args": [
+          {
+            "id": 0,
+            "name": "Text",
+            "value": "hello"
+          },
+          {
+            "id": 1,
+            "name": "Long",
+            "value": false
+          },
+          {
+            "id": 2,
+            "name": "Tasker Layout",
+            "value": false
+          },
+          {
+            "id": 3,
+            "name": "Title",
+            "value": ""
+          },
+          {
+            "id": 4,
+            "name": "Icon",
+            "value": ""
+          },
+          {
+            "id": 5,
+            "name": "Icon Size",
+            "value": ""
+          },
+          {
+            "id": 6,
+            "name": "Background Colour",
+            "value": ""
+          },
+          {
+            "id": 7,
+            "name": "Task",
+            "value": ""
+          },
+          {
+            "id": 8,
+            "name": "Timeout",
+            "value": ""
+          },
+          {
+            "id": 9,
+            "name": "Continue Task Immediately",
+            "value": false
+          },
+          {
+            "id": 10,
+            "name": "Text Colour",
+            "value": ""
+          },
+          {
+            "id": 11,
+            "name": "Dismiss On Click",
+            "value": false
+          },
+          {
+            "id": 12,
+            "name": "Show Over Everything",
+            "value": false
+          },
+          {
+            "id": 13,
+            "name": "Position",
+            "value": ""
+          },
+          {
+            "id": 14,
+            "name": "Use HTML",
+            "value": false
+          },
+          {
+            "id": 15,
+            "name": "ID",
+            "value": ""
+          }
+        ],
+        "blockProperties": {
+          "a": 0,
+          "b": 548,
+          "c": "None",
+          "g": false,
+          "h": false
+        },
+        "code": 548,
+        "helpId": "flash",
+        "name": "Flash"
+      }
+    ]
+  },
+  {
+    "method": "append_action",
+    "args": {
+      "action": {
+        "action": {
+          "code": 548,
+          "args": [
+            {
+              "id": 0,
+              "value": "world"
+            }
+          ]
+        }
+      }
+    },
+    "result": [
+      {
+        "args": [
+          {
+            "id": 0,
+            "name": "Text",
+            "value": "hello"
+          },
+          {
+            "id": 1,
+            "name": "Long",
+            "value": false
+          },
+          {
+            "id": 2,
+            "name": "Tasker Layout",
+            "value": false
+          },
+          {
+            "id": 3,
+            "name": "Title",
+            "value": ""
+          },
+          {
+            "id": 4,
+            "name": "Icon",
+            "value": ""
+          },
+          {
+            "id": 5,
+            "name": "Icon Size",
+            "value": ""
+          },
+          {
+            "id": 6,
+            "name": "Background Colour",
+            "value": ""
+          },
+          {
+            "id": 7,
+            "name": "Task",
+            "value": ""
+          },
+          {
+            "id": 8,
+            "name": "Timeout",
+            "value": ""
+          },
+          {
+            "id": 9,
+            "name": "Continue Task Immediately",
+            "value": false
+          },
+          {
+            "id": 10,
+            "name": "Text Colour",
+            "value": ""
+          },
+          {
+            "id": 11,
+            "name": "Dismiss On Click",
+            "value": false
+          },
+          {
+            "id": 12,
+            "name": "Show Over Everything",
+            "value": false
+          },
+          {
+            "id": 13,
+            "name": "Position",
+            "value": ""
+          },
+          {
+            "id": 14,
+            "name": "Use HTML",
+            "value": false
+          },
+          {
+            "id": 15,
+            "name": "ID",
+            "value": ""
+          }
+        ],
+        "blockProperties": {
+          "a": 0,
+          "b": 548,
+          "c": "None",
+          "g": false,
+          "h": false
+        },
+        "code": 548,
+        "helpId": "flash",
+        "name": "Flash"
+      },
+      {
+        "args": [
+          {
+            "id": 0,
+            "name": "Text",
+            "value": "world"
+          },
+          {
+            "id": 1,
+            "name": "Long",
+            "value": false
+          },
+          {
+            "id": 2,
+            "name": "Tasker Layout",
+            "value": false
+          },
+          {
+            "id": 3,
+            "name": "Title",
+            "value": ""
+          },
+          {
+            "id": 4,
+            "name": "Icon",
+            "value": ""
+          },
+          {
+            "id": 5,
+            "name": "Icon Size",
+            "value": ""
+          },
+          {
+            "id": 6,
+            "name": "Background Colour",
+            "value": ""
+          },
+          {
+            "id": 7,
+            "name": "Task",
+            "value": ""
+          },
+          {
+            "id": 8,
+            "name": "Timeout",
+            "value": ""
+          },
+          {
+            "id": 9,
+            "name": "Continue Task Immediately",
+            "value": false
+          },
+          {
+            "id": 10,
+            "name": "Text Colour",
+            "value": ""
+          },
+          {
+            "id": 11,
+            "name": "Dismiss On Click",
+            "value": false
+          },
+          {
+            "id": 12,
+            "name": "Show Over Everything",
+            "value": false
+          },
+          {
+            "id": 13,
+            "name": "Position",
+            "value": ""
+          },
+          {
+            "id": 14,
+            "name": "Use HTML",
+            "value": false
+          },
+          {
+            "id": 15,
+            "name": "ID",
+            "value": ""
+          }
+        ],
+        "blockProperties": {
+          "a": 0,
+          "b": 0,
+          "c": "None",
+          "g": false,
+          "h": false
+        },
+        "code": 548,
+        "helpId": "flash",
+        "name": "Flash"
+      }
+    ]
+  },
+  {
+    "method": "get_actions",
+    "args": {},
+    "result": [
+      {
+        "args": [
+          {
+            "id": 0,
+            "name": "Text",
+            "value": "hello"
+          },
+          {
+            "id": 1,
+            "name": "Long",
+            "value": false
+          },
+          {
+            "id": 2,
+            "name": "Tasker Layout",
+            "value": false
+          },
+          {
+            "id": 3,
+            "name": "Title",
+            "value": ""
+          },
+          {
+            "id": 4,
+            "name": "Icon",
+            "value": ""
+          },
+          {
+            "id": 5,
+            "name": "Icon Size",
+            "value": ""
+          },
+          {
+            "id": 6,
+            "name": "Background Colour",
+            "value": ""
+          },
+          {
+            "id": 7,
+            "name": "Task",
+            "value": ""
+          },
+          {
+            "id": 8,
+            "name": "Timeout",
+            "value": ""
+          },
+          {
+            "id": 9,
+            "name": "Continue Task Immediately",
+            "value": false
+          },
+          {
+            "id": 10,
+            "name": "Text Colour",
+            "value": ""
+          },
+          {
+            "id": 11,
+            "name": "Dismiss On Click",
+            "value": false
+          },
+          {
+            "id": 12,
+            "name": "Show Over Everything",
+            "value": false
+          },
+          {
+            "id": 13,
+            "name": "Position",
+            "value": ""
+          },
+          {
+            "id": 14,
+            "name": "Use HTML",
+            "value": false
+          },
+          {
+            "id": 15,
+            "name": "ID",
+            "value": ""
+          }
+        ],
+        "blockProperties": {
+          "a": 0,
+          "b": 548,
+          "c": "None",
+          "g": false,
+          "h": false
+        },
+        "code": 548,
+        "helpId": "flash",
+        "name": "Flash"
+      },
+      {
+        "args": [
+          {
+            "id": 0,
+            "name": "Text",
+            "value": "world"
+          },
+          {
+            "id": 1,
+            "name": "Long",
+            "value": false
+          },
+          {
+            "id": 2,
+            "name": "Tasker Layout",
+            "value": false
+          },
+          {
+            "id": 3,
+            "name": "Title",
+            "value": ""
+          },
+          {
+            "id": 4,
+            "name": "Icon",
+            "value": ""
+          },
+          {
+            "id": 5,
+            "name": "Icon Size",
+            "value": ""
+          },
+          {
+            "id": 6,
+            "name": "Background Colour",
+            "value": ""
+          },
+          {
+            "id": 7,
+            "name": "Task",
+            "value": ""
+          },
+          {
+            "id": 8,
+            "name": "Timeout",
+            "value": ""
+          },
+          {
+            "id": 9,
+            "name": "Continue Task Immediately",
+            "value": false
+          },
+          {
+            "id": 10,
+            "name": "Text Colour",
+            "value": ""
+          },
+          {
+            "id": 11,
+            "name": "Dismiss On Click",
+            "value": false
+          },
+          {
+            "id": 12,
+            "name": "Show Over Everything",
+            "value": false
+          },
+          {
+            "id": 13,
+            "name": "Position",
+            "value": ""
+          },
+          {
+            "id": 14,
+            "name": "Use HTML",
+            "value": false
+          },
+          {
+            "id": 15,
+            "name": "ID",
+            "value": ""
+          }
+        ],
+        "blockProperties": {
+          "a": 0,
+          "b": 548,
+          "c": "None",
+          "g": false,
+          "h": false
+        },
+        "code": 548,
+        "helpId": "flash",
+        "name": "Flash"
+      }
+    ]
+  },
+  {
+    "method": "delete_action",
+    "args": {
+      "index": 1
+    },
+    "result": [
+      {
+        "args": [
+          {
+            "id": 0,
+            "name": "Text",
+            "value": "hello"
+          },
+          {
+            "id": 1,
+            "name": "Long",
+            "value": false
+          },
+          {
+            "id": 2,
+            "name": "Tasker Layout",
+            "value": false
+          },
+          {
+            "id": 3,
+            "name": "Title",
+            "value": ""
+          },
+          {
+            "id": 4,
+            "name": "Icon",
+            "value": ""
+          },
+          {
+            "id": 5,
+            "name": "Icon Size",
+            "value": ""
+          },
+          {
+            "id": 6,
+            "name": "Background Colour",
+            "value": ""
+          },
+          {
+            "id": 7,
+            "name": "Task",
+            "value": ""
+          },
+          {
+            "id": 8,
+            "name": "Timeout",
+            "value": ""
+          },
+          {
+            "id": 9,
+            "name": "Continue Task Immediately",
+            "value": false
+          },
+          {
+            "id": 10,
+            "name": "Text Colour",
+            "value": ""
+          },
+          {
+            "id": 11,
+            "name": "Dismiss On Click",
+            "value": false
+          },
+          {
+            "id": 12,
+            "name": "Show Over Everything",
+            "value": false
+          },
+          {
+            "id": 13,
+            "name": "Position",
+            "value": ""
+          },
+          {
+            "id": 14,
+            "name": "Use HTML",
+            "value": false
+          },
+          {
+            "id": 15,
+            "name": "ID",
+            "value": ""
+          }
+        ],
+        "blockProperties": {
+          "a": 0,
+          "b": 548,
+          "c": "None",
+          "g": false,
+          "h": false
+        },
+        "code": 548,
+        "helpId": "flash",
+        "name": "Flash"
+      }
+    ]
+  },
+  {
+    "method": "delete_action",
+    "args": {
+      "index": 0
+    },
+    "result": []
+  },
+  {
+    "method": "get_actions",
+    "args": {},
+    "result": []
+  }
+]

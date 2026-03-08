@@ -49,6 +49,9 @@
             screenshot-cli = pkgs.python3.pkgs.callPackage ./screenshot-cli {
               spectacle = if pkgs.stdenv.hostPlatform.isLinux then pkgs.kdePackages.spectacle else null;
             };
+            tasker-cli = pkgs.python3.pkgs.callPackage ./tasker-cli {
+              inherit (pkgs) android-tools makeWrapper;
+            };
             weather-cli = pkgs.python3.pkgs.callPackage ./weather-cli { };
           };
 
@@ -81,6 +84,11 @@
               };
               "context7-cli" = { };
               "screenshot-cli" = { };
+              "tasker-cli" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  pytest
+                ];
+              };
               "kagi-search" = {
                 extraPythonPackages = with pkgs.python3.pkgs; [
                   beautifulsoup4
