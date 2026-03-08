@@ -2,22 +2,32 @@
 
 import asyncio
 import json
+import logging
 from typing import Any
 
+from browser_cli.browsh import is_running as browsh_is_running
+from browser_cli.browsh import start as browsh_start
 from browser_cli.errors import BrowserConnectionError, CommandError
 from browser_cli.paths import get_socket_path
+
+logger = logging.getLogger(__name__)
 
 
 class BrowserClient:
     """Unix socket client for browser automation."""
 
-    def __init__(self, socket_path: str | None = None) -> None:
+    def __init__(
+        self,
+        socket_path: str | None = None,
+        firefox_path: str | None = None,
+    ) -> None:
         """Initialize the browser CLI client."""
         if socket_path:
             self.socket_path = socket_path
         else:
             self.socket_path = str(get_socket_path())
 
+        self.firefox_path = firefox_path
         self.message_counter = 0
 
     async def send_command(
@@ -69,14 +79,34 @@ class BrowserClient:
             raise CommandError(msg)
 
         except (ConnectionRefusedError, FileNotFoundError) as e:
+            # Try auto-starting browsh as a headless backend
+            if await self._try_auto_start():
+                return await self.send_command(command, params, tab_id)
+
             msg = (
                 "Cannot connect to browser extension. Make sure:\n"
-                "1. Firefox is running\n"
-                "2. The Browser CLI extension is installed\n"
-                "3. The extension is enabled on the current tab\n"
+                "1. Firefox/LibreWolf is running with the browser-cli extension, or\n"
+                "2. browsh is installed for headless mode\n"
                 f"\nSocket path: {self.socket_path}"
             )
             raise BrowserConnectionError(msg) from e
+
+    async def _try_auto_start(self) -> bool:
+        """Try to auto-start browsh as a headless backend.
+
+        Returns True if browsh was started successfully.
+        """
+        try:
+            if browsh_is_running():
+                return False  # Already running but socket failed — real error
+
+            logger.info("No browser connected, starting browsh headless backend...")
+            browsh_start(firefox_path=self.firefox_path)
+        except (FileNotFoundError, TimeoutError, RuntimeError) as e:
+            logger.debug("Auto-start failed: %s", e)
+            return False
+        else:
+            return True
 
     async def exec_js(
         self,

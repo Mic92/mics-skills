@@ -1,7 +1,8 @@
 """Browser CLI - Control Firefox from the command line.
 
 Provides a minimal CLI that executes JavaScript via stdin, with a rich
-JS API for browser automation.
+JS API for browser automation. Auto-starts a headless browsh backend
+when no GUI browser is running.
 """
 
 from browser_cli.bridge import NativeMessagingBridge
