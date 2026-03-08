@@ -52,8 +52,12 @@ Rules:
 Conditions use `{"e": <lhs>, "b": <operator>, "f": <rhs>}`. Multiple
 conditions on one action are ANDed.
 
-Operators: `Equals`, `NotEqualsString`, `LessThan`, `GreaterThan`, `Matches`,
-`IsSet`, `Isn'tSet`
+String operators: `EqualsString`, `NotEqualsString`, `Matches`, `NotMatches`,
+`MatchesRegex`, `NotMatchesRegex`
+
+Math operators: `Equals`, `NotEquals`, `LessThan`, `MoreThan`, `Even`, `Odd`
+
+State operators: `Set`, `NotSet` (no `"f"` value needed)
 
 ```json
 {"action": "Flash", "args": {"Text": "Low!"}, "condition": [{"e": "%BATT", "b": "LessThan", "f": "20"}]}
