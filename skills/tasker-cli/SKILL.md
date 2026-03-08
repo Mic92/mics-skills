@@ -67,6 +67,61 @@ State operators: `Set`, `NotSet` (no `"f"` value needed)
 {"action": "End If"}
 ```
 
+## Quirks and pitfalls
+
+### Condition operators must be exact
+
+The WebUI silently accepts invalid operator names but drops the `"b"` field,
+producing a broken condition that crashes Tasker with a NullPointerException.
+Always use the exact operator names listed above.
+
+### JavaScriptlet cannot see variables with numbers in the name
+
+`%caller1`, `%arr3` etc are invisible to JavaScriptlet. Copy them to a
+plain variable first:
+
+```json
+{
+  "action": "Variable Set",
+  "args": { "Name": "%callerinfo", "To": "%caller1" }
+}
+```
+
+### JavaScriptlet requires Auto Exit for variable export
+
+With `"Auto Exit": "true"` (the default in Tasker's UI but **false** when
+omitted in JSON), variables declared with `var` are automatically exported
+to Tasker. Without it the JavaScriptlet hangs until timeout. Always set it:
+
+```json
+{
+  "action": "JavaScriptlet",
+  "args": {
+    "Code": "var x = 1;",
+    "Auto Exit": "true",
+    "Timeout (Seconds)": "45"
+  }
+}
+```
+
+### Boolean args need native JSON booleans
+
+String `"true"` silently becomes `false` in the WebUI. Use actual booleans
+for boolean-typed args: `"Auto Exit": "true"` works because tasker-cli
+coerces it, but the wire format sends `true` not `"true"`.
+
+### Profile caller variable
+
+When a profile triggers a task directly, `%caller1` contains
+`profile=enter:Profile Name` or `profile=exit:Profile Name`.
+When called via Perform Task, `%caller1` is `task=Task Name`
+and `%caller2` has the profile info.
+
+### Global variables need uppercase
+
+`%GF_CURRENT` is global (survives across tasks). `%place` is local
+(lowercase, scoped to the current task invocation).
+
 ## Other commands
 
 ```bash
