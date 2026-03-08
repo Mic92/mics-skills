@@ -30,7 +30,13 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["T201"]  # Allow print() in CLI tools
+ignore = [
+  "T201",     # Allow print() in CLI tools
+  "COM812",   # Conflicts with ruff formatter
+  "D203",     # Incompatible with D211 (no-blank-line-before-class)
+  "D213",     # Incompatible with D212 (multi-line-summary-first-line)
+  "ASYNC240", # We use asyncio, not trio/anyio — pathlib in async is fine for socket ops
+]
 
 [tool.ruff.format]
 quote-style = "double"

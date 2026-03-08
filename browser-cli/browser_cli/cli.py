@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from browser_cli.client import BrowserClient
+from browser_cli.config import get_firefox_path
 from browser_cli.errors import BrowserCLIError
 
 
@@ -221,24 +222,34 @@ def format_snapshot(
     return json.dumps(result, indent=2)
 
 
-async def exec_js(tab_id: str | None, code: str, socket: str | None) -> None:
+async def exec_js(
+    tab_id: str | None,
+    code: str,
+    socket: str | None,
+    firefox_path: str | None = None,
+) -> None:
     """Execute JavaScript code in a browser tab."""
-    client = BrowserClient(socket)
+    client = BrowserClient(socket, firefox_path=firefox_path)
     result = await client.exec_js(code, tab_id)
     if result is not None:
         print(format_snapshot(result))
 
 
-async def navigate_tab(tab_id: str | None, url: str, socket: str | None) -> None:
+async def navigate_tab(
+    tab_id: str | None,
+    url: str,
+    socket: str | None,
+    firefox_path: str | None = None,
+) -> None:
     """Navigate a tab to a URL and wait for load."""
-    client = BrowserClient(socket)
+    client = BrowserClient(socket, firefox_path=firefox_path)
     await client.send_command("go", {"url": url}, tab_id)
     print(f"Navigated to {url}")
 
 
-async def list_tabs(socket: str | None) -> None:
+async def list_tabs(socket: str | None, firefox_path: str | None = None) -> None:
     """List all managed tabs."""
-    client = BrowserClient(socket)
+    client = BrowserClient(socket, firefox_path=firefox_path)
     tabs = await client.list_tabs()
     if not tabs:
         print("No managed tabs")
@@ -345,12 +356,25 @@ Available JS API:
         help="Navigate the tab to URL and wait for load",
     )
     parser.add_argument(
+        "--firefox-path",
+        metavar="PATH",
+        help="Path to Firefox/LibreWolf binary for headless mode (env: BROWSER_CLI_FIREFOX_PATH)",
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug logging",
     )
 
     return parser
+
+
+def _resolve_firefox_path(args: argparse.Namespace) -> str | None:
+    """Resolve Firefox path from CLI args, env, or config file."""
+    cli_path: str | None = args.firefox_path
+    if cli_path:
+        return cli_path
+    return get_firefox_path()
 
 
 def main() -> None:
@@ -365,15 +389,18 @@ def main() -> None:
         if args.install_host:
             install_native_host()
         elif args.list:
-            asyncio.run(list_tabs(args.socket))
+            firefox_path = _resolve_firefox_path(args)
+            asyncio.run(list_tabs(args.socket, firefox_path=firefox_path))
         elif args.go:
-            asyncio.run(navigate_tab(args.tab_id, args.go, args.socket))
+            firefox_path = _resolve_firefox_path(args)
+            asyncio.run(navigate_tab(args.tab_id, args.go, args.socket, firefox_path=firefox_path))
         elif args.tab_id or not sys.stdin.isatty():
             code = sys.stdin.read()
             if not code.strip():
                 print("Error: No JavaScript code provided on stdin", file=sys.stderr)
                 sys.exit(1)
-            asyncio.run(exec_js(args.tab_id, code, args.socket))
+            firefox_path = _resolve_firefox_path(args)
+            asyncio.run(exec_js(args.tab_id, code, args.socket, firefox_path=firefox_path))
         else:
             parser.print_help()
             sys.exit(1)
