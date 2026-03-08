@@ -49,8 +49,15 @@ Rules:
 
 ## Conditions and control flow
 
+Conditions use `{"e": <lhs>, "b": <operator>, "f": <rhs>}`. Multiple
+conditions on one action are ANDed.
+
+Operators: `Equals`, `NotEqualsString`, `LessThan`, `GreaterThan`, `Matches`,
+`IsSet`, `Isn'tSet`
+
 ```json
 {"action": "Flash", "args": {"Text": "Low!"}, "condition": [{"e": "%BATT", "b": "LessThan", "f": "20"}]}
+{"action": "Stop", "args": {"With Error": "false"}, "condition": [{"e": "%par2", "b": "Equals", "f": "enter"}, {"e": "%GF", "b": "NotEqualsString", "f": "%par1"}]}
 {"action": "If", "args": {}, "condition": [{"e": "%BATT", "b": "LessThan", "f": "20"}]}
 {"action": "Else"}
 {"action": "End If"}
