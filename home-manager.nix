@@ -15,6 +15,7 @@ let
     "kagi-search"
     "pexpect-cli"
     "screenshot-cli"
+    "tasker-cli"
     "weather-cli"
   ];
 in
