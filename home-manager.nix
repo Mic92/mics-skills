@@ -9,6 +9,7 @@ let
   # Each skill maps to a package name and a skills/ subdirectory.
   allSkills = [
     "browser-cli"
+    "calendar-cli"
     "context7-cli"
     "db-cli"
     "gmaps-cli"
