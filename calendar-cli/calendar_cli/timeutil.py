@@ -129,7 +129,7 @@ def sanitize_timerange(
         log.warning("DTEND < DTSTART, swapping")
         dtstart, dtend = dtend, dtstart
     elif dtend == dtstart:
-        log.warning("DTEND == DTSTART, assuming 1 hour / 1 day")
+        log.debug("DTEND == DTSTART, assuming 1 hour / 1 day")
         dtend = dtstart + default_duration(dtstart)
 
     return dtstart, dtend
