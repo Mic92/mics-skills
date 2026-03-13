@@ -16,6 +16,7 @@ import os
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from .models import Attendee, CalendarEvent
 from .parse import read_event_file
@@ -24,7 +25,7 @@ __all__ = ["cached_collect_events"]
 
 log = logging.getLogger(__name__)
 
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 
 _CREATE_SQL = """\
 CREATE TABLE IF NOT EXISTS meta (
@@ -71,9 +72,22 @@ CREATE INDEX IF NOT EXISTS idx_events_calendar ON events(calendar);
 
 
 def _dt_to_str(dt: datetime | date) -> str:
-    """Serialize a date or datetime to a string for storage."""
+    """Serialize a date or datetime to a string for storage.
+
+    For timezone-aware datetimes with an Olson timezone (ZoneInfo), the
+    timezone key is appended in brackets so it survives a round-trip:
+    ``2026-02-23T10:00:00-05:00[America/New_York]``.
+
+    This is critical for recurring events that cross DST boundaries:
+    ``fromisoformat()`` would otherwise convert ZoneInfo to a fixed UTC
+    offset, causing all occurrences to use the DTSTART offset regardless
+    of whether DST is active.
+    """
     if isinstance(dt, datetime):
-        return dt.isoformat()
+        iso = dt.isoformat()
+        if isinstance(dt.tzinfo, ZoneInfo):
+            iso += f"[{dt.tzinfo.key}]"
+        return iso
     return dt.isoformat()
 
 
@@ -81,10 +95,20 @@ def _str_to_dt(s: str) -> datetime | date:
     """Deserialize a date or datetime from storage.
 
     ISO 8601 date strings (YYYY-MM-DD, 10 chars) → ``date``.
+    Strings with a bracketed Olson zone suffix (e.g. ``[America/New_York]``)
+    restore the proper ``ZoneInfo`` so DST transitions work correctly.
     Everything else → ``datetime.fromisoformat()``.
     """
     if len(s) == 10:
         return date.fromisoformat(s)
+    # Check for bracketed Olson timezone suffix
+    if s.endswith("]"):
+        bracket = s.rfind("[")
+        if bracket != -1:
+            tz_key = s[bracket + 1 : -1]
+            iso_part = s[:bracket]
+            dt = datetime.fromisoformat(iso_part)
+            return dt.replace(tzinfo=ZoneInfo(tz_key))
     return datetime.fromisoformat(s)
 
 
