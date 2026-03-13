@@ -157,6 +157,16 @@ def _to_naive(dt: datetime | date) -> datetime:
     return datetime.combine(dt, datetime.min.time())
 
 
+def _strip_until_tz(rrule_str: str) -> str:
+    """Strip the trailing Z from UNTIL values in an RRULE string.
+
+    dateutil requires UNTIL and DTSTART to have matching tz-awareness.
+    Since we pass a naive DTSTART to rrulestr(), we must also strip the
+    UTC indicator from UNTIL to avoid a ValueError.
+    """
+    return re.sub(r"(UNTIL=\d{8}T\d{6})Z", r"\1", rrule_str)
+
+
 def _make_rrule_set(ev: CalendarEvent) -> rruleset:
     """Build a dateutil rruleset from an event's RRULE + EXDATE + RDATE."""
     rset = rruleset()
@@ -164,7 +174,7 @@ def _make_rrule_set(ev: CalendarEvent) -> rruleset:
     dtstart = ev.dtstart
     naive_start = _to_naive(dtstart)
 
-    parsed = rrulestr(ev.rrule, dtstart=naive_start)
+    parsed = rrulestr(_strip_until_tz(ev.rrule), dtstart=naive_start)
     if not isinstance(parsed, rrule):
         msg = f"Expected single rrule, got {type(parsed).__name__}"
         raise TypeError(msg)
