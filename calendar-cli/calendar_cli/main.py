@@ -200,28 +200,44 @@ def _print_event(
         f"{_DIM}| {ev.calendar} [{ev.uid}]{_RESET}"
     )
     if verbose or full:
-        if ev.location:
-            print(f"  {_GREEN}Location:{_RESET} {ev.location}")
-        if ev.url:
-            print(f"  {_GREEN}URL:{_RESET} {ev.url}")
-        if ev.organizer:
-            print(f"  {_GREEN}Organizer:{_RESET} {ev.organizer}")
-        if ev.attendees:
-            print(
-                f"  {_GREEN}Attendees:{_RESET} "
-                f"{', '.join(str(a) for a in ev.attendees)}"
-            )
-        if ev.description:
-            desc = (
-                ev.description
-                if full
-                else _truncate(ev.description, _MAX_DESCRIPTION_LEN)
-            )
-            print(f"  {_GREEN}Description:{_RESET} {desc}")
-        if ev.rrule:
-            print(f"  {_MAGENTA}Recurrence:{_RESET} {ev.rrule}")
-        if ev.alarms:
-            print(f"  {_YELLOW}Alarms:{_RESET} {', '.join(ev.alarms)}")
+        _print_detail(ev, full=full)
+
+
+_LABEL_WIDTH = 13  # "Description: " is the widest label
+
+
+def _print_field(label: str, value: str, color: str = _GREEN) -> None:
+    """Print a labeled detail field with consistent indentation.
+
+    Multi-line values are indented to align with the first line's content.
+    """
+    pad = " " * _LABEL_WIDTH
+    prefix = f"  {color}{label + ':':<{_LABEL_WIDTH}}{_RESET}"
+    lines = value.splitlines()
+    print(f"{prefix}{lines[0]}")
+    for line in lines[1:]:
+        print(f"  {pad}{line}")
+
+
+def _print_detail(ev: store.CalendarEvent, *, full: bool = False) -> None:
+    """Print verbose/full detail fields for an event."""
+    if ev.location:
+        _print_field("Location", ev.location)
+    if ev.url:
+        _print_field("URL", ev.url)
+    if ev.organizer:
+        _print_field("Organizer", ev.organizer)
+    if ev.attendees:
+        _print_field("Attendees", ", ".join(str(a) for a in ev.attendees))
+    if ev.description:
+        desc = (
+            ev.description if full else _truncate(ev.description, _MAX_DESCRIPTION_LEN)
+        )
+        _print_field("Description", desc)
+    if ev.rrule:
+        _print_field("Recurrence", ev.rrule, color=_MAGENTA)
+    if ev.alarms:
+        _print_field("Alarms", ", ".join(ev.alarms), color=_YELLOW)
 
 
 def _print_event_list(
