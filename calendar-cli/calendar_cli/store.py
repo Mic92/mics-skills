@@ -19,8 +19,8 @@ from datetime import UTC, date, datetime, timedelta
 from hashlib import sha1
 from pathlib import Path
 
-from dateutil.rrule import rruleset, rrulestr
-from icalendar import Alarm, Calendar, Event
+from dateutil.rrule import rrule, rruleset, rrulestr
+from icalendar import Alarm, Calendar, Component, Event
 
 from .errors import CalendarNotFoundError, InvalidInputError
 from .models import CalendarEvent
@@ -164,7 +164,11 @@ def _make_rrule_set(ev: CalendarEvent) -> rruleset:
     dtstart = ev.dtstart
     naive_start = _to_naive(dtstart)
 
-    rset.rrule(rrulestr(ev.rrule, dtstart=naive_start))
+    parsed = rrulestr(ev.rrule, dtstart=naive_start)
+    if not isinstance(parsed, rrule):
+        msg = f"Expected single rrule, got {type(parsed).__name__}"
+        raise TypeError(msg)
+    rset.rrule(parsed)
 
     for exdt in ev.exdates:
         rset.exdate(_to_naive(exdt))
@@ -596,7 +600,7 @@ def _patch_vevent(  # noqa: PLR0913, C901
     would be lost by a full rebuild.
     """
     try:
-        data = filepath.read_bytes()
+        data = filepath.read_text()
     except OSError as e:
         msg = f"Failed to read {filepath}: {e}"
         raise CalendarNotFoundError(msg) from e
@@ -655,7 +659,7 @@ def _patch_vevent(  # noqa: PLR0913, C901
     return result
 
 
-def _patch_prop(component: Event, name: str, value: object) -> None:
+def _patch_prop(component: Component, name: str, value: object) -> None:
     """Set a property on a VEVENT, replacing any existing value."""
     if value is None:
         return

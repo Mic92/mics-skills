@@ -6,7 +6,7 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from icalendar import Calendar, Event
+from icalendar import Calendar, Component
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -18,7 +18,7 @@ from .util import get_attendee_list, strip_mailto
 log = logging.getLogger(__name__)
 
 
-def _parse_rrule(event: Event) -> str:
+def _parse_rrule(event: Component) -> str:
     rrule = event.get("rrule")
     if rrule is None:
         return ""
@@ -26,7 +26,7 @@ def _parse_rrule(event: Event) -> str:
     return result
 
 
-def _parse_alarm_minutes(event: Event) -> list[int]:
+def _parse_alarm_minutes(event: Component) -> list[int]:
     """Extract alarm triggers as positive minutes-before values.
 
     Handles three trigger forms per RFC 5545 §3.8.6.3:
@@ -78,7 +78,7 @@ def _dt_value(val: object) -> datetime | date | None:
     return None
 
 
-def _parse_organizer(component: Event) -> str:
+def _parse_organizer(component: Component) -> str:
     """Extract organizer as 'Name (email)' or just email."""
     org = component.get("organizer")
     if org is None:
@@ -90,7 +90,7 @@ def _parse_organizer(component: Event) -> str:
     return addr
 
 
-def _parse_date_list(component: Event, prop_name: str) -> list[datetime | date]:
+def _parse_date_list(component: Component, prop_name: str) -> list[datetime | date]:
     """Extract a list of date/datetime values from a multi-value property.
 
     Works for both EXDATE and RDATE which share the same vDDDLists
@@ -109,17 +109,17 @@ def _parse_date_list(component: Event, prop_name: str) -> list[datetime | date]:
     return result
 
 
-def _parse_exdates(component: Event) -> list[datetime | date]:
+def _parse_exdates(component: Component) -> list[datetime | date]:
     """Extract EXDATE values from a VEVENT component."""
     return _parse_date_list(component, "exdate")
 
 
-def _parse_rdates(component: Event) -> list[datetime | date]:
+def _parse_rdates(component: Component) -> list[datetime | date]:
     """Extract RDATE values from a VEVENT component (RFC 5545 §3.8.5.2)."""
     return _parse_date_list(component, "rdate")
 
 
-def _parse_attendees(component: Event) -> list[Attendee]:
+def _parse_attendees(component: Component) -> list[Attendee]:
     """Extract attendees with name, email, and PARTSTAT."""
     attendees: list[Attendee] = []
     for addr in get_attendee_list(component):
@@ -134,7 +134,7 @@ def read_event_file(path: Path, calendar_name: str) -> list[CalendarEvent]:
     """Parse a single .ics file and return CalendarEvent(s)."""
     events: list[CalendarEvent] = []
     try:
-        data = path.read_bytes()
+        data = path.read_text()
         cal = Calendar.from_ical(data)
     except (ValueError, OSError):
         return events

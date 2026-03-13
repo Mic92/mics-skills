@@ -424,7 +424,7 @@ def test_reply_updates_local_partstat(mock_run: MagicMock, tmp_path: Path) -> No
     # Verify local store was updated
     ics_files = sorted((cal_dir / "personal").rglob("*.ics"))
     assert len(ics_files) == 1
-    cal = Calendar.from_ical(ics_files[0].read_bytes())
+    cal = Calendar.from_ical(ics_files[0].read_text())
     event = next(iter(cal.walk("VEVENT")))
     attendee = event.get("attendee")
     # Single attendee comes back as vCalAddress, not list

@@ -7,10 +7,10 @@ import email.utils
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any
 
-from icalendar import Calendar, Timezone
+from icalendar import Calendar, Component, Timezone
 
 if TYPE_CHECKING:
-    from icalendar import Event, vCalAddress
+    from icalendar import vCalAddress
 
 
 def strip_mailto(s: str) -> str:
@@ -21,7 +21,7 @@ def strip_mailto(s: str) -> str:
     return s.replace("MAILTO:", "").replace("mailto:", "")
 
 
-def get_attendee_list(component: Event) -> list[vCalAddress]:
+def get_attendee_list(component: Component) -> list[vCalAddress]:
     """Return the ATTENDEE property as a list, even if there's only one."""
     raw = component.get("attendee")
     if raw is None:

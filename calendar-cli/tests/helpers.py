@@ -142,7 +142,9 @@ def extract_ics_from_email(raw: str) -> Calendar:
         if ct == "text/calendar" or fn.endswith(".ics"):
             payload = part.get_payload(decode=True)
             assert isinstance(payload, bytes)
-            return Calendar.from_ical(payload)
+            cal = Calendar.from_ical(payload.decode())
+            assert isinstance(cal, Calendar)
+            return cal
     err_msg = "No calendar attachment found in email"
     raise AssertionError(err_msg)
 
