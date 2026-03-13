@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
 import shutil
 import subprocess
 import sys
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from . import create, import_invite, reply, store
 from .errors import (
@@ -49,7 +53,33 @@ def _parse_date(s: str) -> date:
         raise InvalidInputError(msg) from None
 
 
-_LOCAL_TZ = datetime.now().astimezone().tzinfo
+def _detect_local_tz() -> datetime.tzinfo:
+    """Detect the system's local timezone as a ZoneInfo object.
+
+    Falls back to a fixed UTC offset if detection fails.  Uses a proper
+    ZoneInfo so DST transitions are handled correctly (e.g. CET ↔ CEST).
+    """
+    tz_env = os.environ.get("TZ")
+    if tz_env:
+        with contextlib.suppress(KeyError):
+            return ZoneInfo(tz_env)
+
+    localtime = Path("/etc/localtime")
+    if localtime.is_symlink():
+        parts = str(localtime.resolve()).split("/zoneinfo/")
+        if len(parts) == 2:
+            with contextlib.suppress(KeyError):
+                return ZoneInfo(parts[1])
+
+    tz_file = Path("/etc/timezone")
+    if tz_file.exists():
+        with contextlib.suppress(KeyError, OSError):
+            return ZoneInfo(tz_file.read_text().strip())
+
+    return datetime.now(tz=UTC).astimezone().tzinfo  # type: ignore[return-value]
+
+
+_LOCAL_TZ = _detect_local_tz()
 
 
 def _format_dt(dt: datetime | date) -> str:
