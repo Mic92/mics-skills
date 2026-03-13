@@ -28,9 +28,8 @@ python.pkgs.buildPythonPackage rec {
   # This is a type stubs package, it has no tests to run
   doCheck = false;
 
-  pythonImportsCheck = [
-    "icalendar-stubs"
-  ];
+  # Type stubs package — no importable module to check.
+  pythonImportsCheck = [];
 
   meta = with lib; {
     description = "Typing stubs for icalendar";
