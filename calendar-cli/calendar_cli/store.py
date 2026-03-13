@@ -333,6 +333,18 @@ def _discover_ics_files(
     return ics_files, base
 
 
+def _cache_path_for(calendars_dir: str | None) -> Path | None:
+    """Derive a cache DB path scoped to the calendars directory.
+
+    Returns ``None`` when no suitable cache location can be determined.
+    """
+    base = _resolve_calendars_dir(calendars_dir)
+    cache_home = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    # Hash the base path so different calendar dirs get separate caches
+    key = sha1(str(base).encode(), usedforsecurity=False).hexdigest()[:12]
+    return Path(cache_home) / "calendar-cli" / f"cache-{key}.db"
+
+
 def _collect_raw_events(
     calendars_dir: str | None,
     calendar_filter: str | None,
@@ -341,7 +353,7 @@ def _collect_raw_events(
     ics_files, _base = _discover_ics_files(calendars_dir, calendar_filter)
     if not ics_files:
         return []
-    return cached_collect_events(ics_files)
+    return cached_collect_events(ics_files, db_path=_cache_path_for(calendars_dir))
 
 
 def _split_masters_overrides(
