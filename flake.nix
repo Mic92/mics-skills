@@ -41,6 +41,9 @@
           packages = {
             browser-cli = pkgs.python3.pkgs.callPackage ./browser-cli { };
             browser-cli-extension = (pkgs.callPackages ./firefox-extensions { }).browser-cli-extension;
+            calendar-cli = pkgs.callPackage ./calendar-cli {
+              inherit (pkgs) python3 vdirsyncer msmtp;
+            };
             context7-cli = pkgs.python3.pkgs.callPackage ./context7-cli { };
             db-cli = pkgs.callPackage ./db-cli { };
             gmaps-cli = pkgs.python3.pkgs.callPackage ./gmaps-cli { };
@@ -66,6 +69,12 @@
 
             programs.mypy.enable = true;
             programs.mypy.directories = {
+              "calendar-cli" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  icalendar
+                  pytest
+                ];
+              };
               "pexpect-cli" = {
                 extraPythonPackages = with pkgs.python3.pkgs; [
                   pexpect
