@@ -134,7 +134,7 @@ def read_event_file(path: Path, calendar_name: str) -> list[CalendarEvent]:
     """Parse a single .ics file and return CalendarEvent(s)."""
     events: list[CalendarEvent] = []
     try:
-        data = path.read_text()
+        data = path.read_text(encoding="utf-8")
         cal = Calendar.from_ical(data)
     except (ValueError, OSError):
         return events

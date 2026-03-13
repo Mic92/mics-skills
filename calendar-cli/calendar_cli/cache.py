@@ -236,6 +236,9 @@ def cached_collect_events(
 
     try:
         return _sync_and_query(conn, ics_files)
+    except (OSError, sqlite3.DatabaseError) as exc:
+        log.debug("Cache error (%s), falling back to direct parse", exc)
+        return _parse_all(ics_files)
     finally:
         conn.close()
 

@@ -245,8 +245,8 @@ def _update_local_partstat(
             continue
 
         try:
-            cal = Calendar.from_ical(existing.read_text())
-        except (ValueError, OSError):
+            cal = Calendar.from_ical(existing.read_text(encoding="utf-8"))
+        except (ValueError, OSError, UnicodeDecodeError):
             continue
 
         if _set_attendee_partstat(cal, user_email, ical_status):
