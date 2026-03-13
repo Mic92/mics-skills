@@ -662,7 +662,7 @@ def _patch_vevent(  # noqa: PLR0913, C901
     would be lost by a full rebuild.
     """
     try:
-        data = filepath.read_text()
+        data = filepath.read_text(encoding="utf-8")
     except OSError as e:
         msg = f"Failed to read {filepath}: {e}"
         raise CalendarNotFoundError(msg) from e

@@ -85,14 +85,14 @@ def _find_existing_ics(uid: str, calendars_dir: str) -> Path | None:
             # Fallback: parse each file to extract UID properly
             for ics_file in ics_dir.glob("*.ics"):
                 try:
-                    cal = Calendar.from_ical(ics_file.read_text())
+                    cal = Calendar.from_ical(ics_file.read_text(encoding="utf-8"))
                     for component in cal.walk():
                         if (
                             component.name == "VEVENT"
                             and str(component.get("uid", "")) == uid
                         ):
                             return ics_file
-                except (ValueError, OSError):
+                except (ValueError, OSError, UnicodeDecodeError):
                     continue
     return None
 
@@ -170,8 +170,8 @@ def _handle_reply(
             continue
 
         try:
-            cal = Calendar.from_ical(existing.read_text())
-        except (ValueError, OSError):
+            cal = Calendar.from_ical(existing.read_text(encoding="utf-8"))
+        except (ValueError, OSError, UnicodeDecodeError):
             continue
 
         updates = _extract_reply_statuses(reply_events)
