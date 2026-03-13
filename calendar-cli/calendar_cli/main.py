@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
 import shutil
 import subprocess
 import sys
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, tzinfo
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from . import create, import_invite, reply, store
 from .errors import (
@@ -49,10 +53,60 @@ def _parse_date(s: str) -> date:
         raise InvalidInputError(msg) from None
 
 
+def _detect_local_tz() -> tzinfo:
+    """Detect the system's local timezone as a ZoneInfo object.
+
+    Falls back to a fixed UTC offset if detection fails.  Uses a proper
+    ZoneInfo so DST transitions are handled correctly (e.g. CET ↔ CEST).
+    """
+    tz_env = os.environ.get("TZ")
+    if tz_env:
+        with contextlib.suppress(KeyError):
+            return ZoneInfo(tz_env)
+
+    localtime = Path("/etc/localtime")
+    if localtime.is_symlink():
+        parts = str(localtime.resolve()).split("/zoneinfo/")
+        if len(parts) == 2:
+            with contextlib.suppress(KeyError):
+                return ZoneInfo(parts[1])
+
+    tz_file = Path("/etc/timezone")
+    if tz_file.exists():
+        with contextlib.suppress(KeyError, OSError):
+            return ZoneInfo(tz_file.read_text().strip())
+
+    # Last resort: fixed offset from system clock
+    now = datetime.now(tz=UTC).astimezone()
+    assert now.tzinfo is not None  # guaranteed by astimezone()
+    return now.tzinfo
+
+
+_LOCAL_TZ = _detect_local_tz()
+
+
 def _format_dt(dt: datetime | date) -> str:
     if isinstance(dt, datetime):
-        return dt.strftime("%Y-%m-%d %H:%M %Z")
-    return dt.isoformat()
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(_LOCAL_TZ)
+        return dt.strftime("%a %Y-%m-%d %H:%M")
+    return dt.strftime("%a %Y-%m-%d")
+
+
+def _format_end(dtstart: datetime | date, dtend: datetime | date | None) -> str:
+    """Format the end time, omitting the date when it matches the start."""
+    if dtend is None:
+        return ""
+    if isinstance(dtstart, datetime) and isinstance(dtend, datetime):
+        start_local = dtstart.astimezone(_LOCAL_TZ) if dtstart.tzinfo else dtstart
+        end_local = dtend.astimezone(_LOCAL_TZ) if dtend.tzinfo else dtend
+        if start_local.date() == end_local.date():
+            return end_local.strftime("%H:%M")
+    return _format_dt(dtend)
+
+
+# Statuses that are the default / uninteresting — suppress from display
+_QUIET_STATUSES = {"", "CONFIRMED"}
 
 
 _vdirsyncer_available: bool | None = None
@@ -75,6 +129,24 @@ def _sync() -> None:
         print(f"Warning: vdirsyncer sync failed: {stderr}", file=sys.stderr)
 
 
+# ---------------------------------------------------------------------------
+# Color support (only when stdout is a TTY)
+# ---------------------------------------------------------------------------
+
+_USE_COLOR = sys.stdout.isatty() and "NO_COLOR" not in os.environ
+
+# ANSI escape helpers — return empty strings when color is disabled.
+_RESET = "\033[0m" if _USE_COLOR else ""
+_BOLD = "\033[1m" if _USE_COLOR else ""
+_DIM = "\033[2m" if _USE_COLOR else ""
+_CYAN = "\033[36m" if _USE_COLOR else ""
+_GREEN = "\033[32m" if _USE_COLOR else ""
+_YELLOW = "\033[33m" if _USE_COLOR else ""
+_RED = "\033[31m" if _USE_COLOR else ""
+_MAGENTA = "\033[35m" if _USE_COLOR else ""
+_BLUE = "\033[34m" if _USE_COLOR else ""
+
+
 _MAX_DESCRIPTION_LEN = 200
 
 
@@ -85,36 +157,102 @@ def _truncate(text: str, max_len: int) -> str:
     return text[: max_len - 1] + "…"
 
 
+def _format_time_range(ev: store.CalendarEvent) -> str:
+    """Format the start-end time range for display."""
+    start = _format_dt(ev.dtstart)
+    end = _format_end(ev.dtstart, ev.dtend)
+    if end:
+        return f"{start} \N{EN DASH} {end}"
+    return start
+
+
+def _ev_date(ev: store.CalendarEvent) -> date:
+    """Return the local date for an event's start."""
+    dt = ev.dtstart
+    if isinstance(dt, datetime):
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(_LOCAL_TZ)
+        return dt.date()
+    return dt
+
+
+def _status_color(status: str) -> str:
+    """Return an ANSI color for the given status."""
+    if status == "TENTATIVE":
+        return _YELLOW
+    if status == "CANCELLED":
+        return _RED
+    return ""
+
+
 def _print_event(
     ev: store.CalendarEvent,
     *,
     verbose: bool = False,
     full: bool = False,
 ) -> None:
-    start = _format_dt(ev.dtstart)
-    end = _format_dt(ev.dtend) if ev.dtend else ""
-    status = f" [{ev.status}]" if ev.status else ""
-    print(f"{start}  {end}  | {ev.summary}{status} | {ev.calendar} | [{ev.uid}]")
+    time_range = _format_time_range(ev)
+    sc = _status_color(ev.status)
+    status = f" {sc}[{ev.status}]{_RESET}" if ev.status not in _QUIET_STATUSES else ""
+    print(
+        f"{_CYAN}{time_range}{_RESET}  "
+        f"{_BOLD}{ev.summary}{_RESET}{status} "
+        f"{_DIM}| {ev.calendar} [{ev.uid}]{_RESET}"
+    )
     if verbose or full:
-        if ev.location:
-            print(f"  Location: {ev.location}")
-        if ev.url:
-            print(f"  URL: {ev.url}")
-        if ev.organizer:
-            print(f"  Organizer: {ev.organizer}")
-        if ev.attendees:
-            print(f"  Attendees: {', '.join(str(a) for a in ev.attendees)}")
-        if ev.description:
-            desc = (
-                ev.description
-                if full
-                else _truncate(ev.description, _MAX_DESCRIPTION_LEN)
-            )
-            print(f"  Description: {desc}")
-        if ev.rrule:
-            print(f"  Recurrence: {ev.rrule}")
-        if ev.alarms:
-            print(f"  Alarms: {', '.join(ev.alarms)}")
+        _print_detail(ev, full=full)
+
+
+_LABEL_WIDTH = 13  # "Description: " is the widest label
+
+
+def _print_field(label: str, value: str, color: str = _GREEN) -> None:
+    """Print a labeled detail field with consistent indentation.
+
+    Multi-line values are indented to align with the first line's content.
+    """
+    pad = " " * _LABEL_WIDTH
+    prefix = f"  {color}{label + ':':<{_LABEL_WIDTH}}{_RESET}"
+    lines = value.splitlines()
+    print(f"{prefix}{lines[0]}")
+    for line in lines[1:]:
+        print(f"  {pad}{line}")
+
+
+def _print_detail(ev: store.CalendarEvent, *, full: bool = False) -> None:
+    """Print verbose/full detail fields for an event."""
+    if ev.location:
+        _print_field("Location", ev.location)
+    if ev.url:
+        _print_field("URL", ev.url)
+    if ev.organizer:
+        _print_field("Organizer", ev.organizer)
+    if ev.attendees:
+        _print_field("Attendees", ", ".join(str(a) for a in ev.attendees))
+    if ev.description:
+        desc = (
+            ev.description if full else _truncate(ev.description, _MAX_DESCRIPTION_LEN)
+        )
+        _print_field("Description", desc)
+    if ev.rrule:
+        _print_field("Recurrence", ev.rrule, color=_MAGENTA)
+    if ev.alarms:
+        _print_field("Alarms", ", ".join(ev.alarms), color=_YELLOW)
+
+
+def _print_event_list(
+    events: list[store.CalendarEvent],
+    *,
+    verbose: bool = False,
+) -> None:
+    """Print events with blank-line separators between different days."""
+    prev_date: date | None = None
+    for ev in events:
+        ev_date = _ev_date(ev)
+        if prev_date is not None and ev_date != prev_date:
+            print()
+        prev_date = ev_date
+        _print_event(ev, verbose=verbose)
 
 
 # ---------------------------------------------------------------------------
@@ -156,8 +294,7 @@ def cmd_list(args: argparse.Namespace) -> int:
 
     limit = args.limit
     shown = events[:limit] if limit else events
-    for ev in shown:
-        _print_event(ev, verbose=args.verbose)
+    _print_event_list(shown, verbose=args.verbose)
 
     remaining = len(events) - len(shown)
     if remaining > 0:
