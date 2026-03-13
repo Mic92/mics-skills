@@ -129,6 +129,24 @@ def _sync() -> None:
         print(f"Warning: vdirsyncer sync failed: {stderr}", file=sys.stderr)
 
 
+# ---------------------------------------------------------------------------
+# Color support (only when stdout is a TTY)
+# ---------------------------------------------------------------------------
+
+_USE_COLOR = sys.stdout.isatty() and "NO_COLOR" not in os.environ
+
+# ANSI escape helpers — return empty strings when color is disabled.
+_RESET = "\033[0m" if _USE_COLOR else ""
+_BOLD = "\033[1m" if _USE_COLOR else ""
+_DIM = "\033[2m" if _USE_COLOR else ""
+_CYAN = "\033[36m" if _USE_COLOR else ""
+_GREEN = "\033[32m" if _USE_COLOR else ""
+_YELLOW = "\033[33m" if _USE_COLOR else ""
+_RED = "\033[31m" if _USE_COLOR else ""
+_MAGENTA = "\033[35m" if _USE_COLOR else ""
+_BLUE = "\033[34m" if _USE_COLOR else ""
+
+
 _MAX_DESCRIPTION_LEN = 200
 
 
@@ -158,6 +176,15 @@ def _ev_date(ev: store.CalendarEvent) -> date:
     return dt
 
 
+def _status_color(status: str) -> str:
+    """Return an ANSI color for the given status."""
+    if status == "TENTATIVE":
+        return _YELLOW
+    if status == "CANCELLED":
+        return _RED
+    return ""
+
+
 def _print_event(
     ev: store.CalendarEvent,
     *,
@@ -165,28 +192,36 @@ def _print_event(
     full: bool = False,
 ) -> None:
     time_range = _format_time_range(ev)
-    status = f" [{ev.status}]" if ev.status not in _QUIET_STATUSES else ""
-    print(f"{time_range}  {ev.summary}{status} | {ev.calendar} [{ev.uid}]")
+    sc = _status_color(ev.status)
+    status = f" {sc}[{ev.status}]{_RESET}" if ev.status not in _QUIET_STATUSES else ""
+    print(
+        f"{_CYAN}{time_range}{_RESET}  "
+        f"{_BOLD}{ev.summary}{_RESET}{status} "
+        f"{_DIM}| {ev.calendar} [{ev.uid}]{_RESET}"
+    )
     if verbose or full:
         if ev.location:
-            print(f"  Location: {ev.location}")
+            print(f"  {_GREEN}Location:{_RESET} {ev.location}")
         if ev.url:
-            print(f"  URL: {ev.url}")
+            print(f"  {_GREEN}URL:{_RESET} {ev.url}")
         if ev.organizer:
-            print(f"  Organizer: {ev.organizer}")
+            print(f"  {_GREEN}Organizer:{_RESET} {ev.organizer}")
         if ev.attendees:
-            print(f"  Attendees: {', '.join(str(a) for a in ev.attendees)}")
+            print(
+                f"  {_GREEN}Attendees:{_RESET} "
+                f"{', '.join(str(a) for a in ev.attendees)}"
+            )
         if ev.description:
             desc = (
                 ev.description
                 if full
                 else _truncate(ev.description, _MAX_DESCRIPTION_LEN)
             )
-            print(f"  Description: {desc}")
+            print(f"  {_GREEN}Description:{_RESET} {desc}")
         if ev.rrule:
-            print(f"  Recurrence: {ev.rrule}")
+            print(f"  {_MAGENTA}Recurrence:{_RESET} {ev.rrule}")
         if ev.alarms:
-            print(f"  Alarms: {', '.join(ev.alarms)}")
+            print(f"  {_YELLOW}Alarms:{_RESET} {', '.join(ev.alarms)}")
 
 
 def _print_event_list(
