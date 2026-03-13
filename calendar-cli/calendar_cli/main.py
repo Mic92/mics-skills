@@ -86,8 +86,8 @@ def _format_dt(dt: datetime | date) -> str:
     if isinstance(dt, datetime):
         if dt.tzinfo is not None:
             dt = dt.astimezone(_LOCAL_TZ)
-        return dt.strftime("%Y-%m-%d %H:%M %Z")
-    return dt.isoformat()
+        return dt.strftime("%a %Y-%m-%d %H:%M %Z")
+    return dt.strftime("%a %Y-%m-%d")
 
 
 _vdirsyncer_available: bool | None = None
@@ -120,6 +120,19 @@ def _truncate(text: str, max_len: int) -> str:
     return text[: max_len - 1] + "…"
 
 
+def _format_end(dtstart: datetime | date, dtend: datetime | date | None) -> str:
+    """Format the end time, omitting the date when it matches the start."""
+    if dtend is None:
+        return ""
+    if isinstance(dtstart, datetime) and isinstance(dtend, datetime):
+        start_local = dtstart.astimezone(_LOCAL_TZ) if dtstart.tzinfo else dtstart
+        end_local = dtend.astimezone(_LOCAL_TZ) if dtend.tzinfo else dtend
+        if start_local.date() == end_local.date():
+            # Same day — show only time
+            return end_local.strftime("%H:%M %Z").rstrip()
+    return _format_dt(dtend)
+
+
 def _print_event(
     ev: store.CalendarEvent,
     *,
@@ -127,7 +140,7 @@ def _print_event(
     full: bool = False,
 ) -> None:
     start = _format_dt(ev.dtstart)
-    end = _format_dt(ev.dtend) if ev.dtend else ""
+    end = _format_end(ev.dtstart, ev.dtend)
     status = f" [{ev.status}]" if ev.status else ""
     print(f"{start}  {end}  | {ev.summary}{status} | {ev.calendar} | [{ev.uid}]")
     if verbose or full:
