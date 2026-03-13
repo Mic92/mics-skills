@@ -330,7 +330,8 @@ def cmd_search(args: argparse.Namespace) -> int:
 
     limit = args.limit
     shown = events[:limit] if limit else events
-    _print_event_list(shown, verbose=args.verbose)
+    for ev in shown:
+        _print_event(ev, verbose=args.verbose)
 
     remaining = len(events) - len(shown)
     if remaining > 0:
