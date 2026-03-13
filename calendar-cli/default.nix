@@ -32,6 +32,7 @@ python3.pkgs.buildPythonApplication {
 
   nativeCheckInputs = with python3.pkgs; [
     pytestCheckHook
+    pytest-xdist
   ];
 
   meta = {

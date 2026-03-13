@@ -22,9 +22,9 @@ from pathlib import Path
 from dateutil.rrule import rrule, rruleset, rrulestr
 from icalendar import Alarm, Calendar, Component, Event
 
+from .cache import cached_collect_events
 from .errors import CalendarNotFoundError, InvalidInputError
 from .models import CalendarEvent
-from .parse import read_event_file
 from .timeutil import (
     coerce_to_datetime,
     default_duration,
@@ -157,6 +157,16 @@ def _to_naive(dt: datetime | date) -> datetime:
     return datetime.combine(dt, datetime.min.time())
 
 
+def _strip_until_tz(rrule_str: str) -> str:
+    """Strip the trailing Z from UNTIL values in an RRULE string.
+
+    dateutil requires UNTIL and DTSTART to have matching tz-awareness.
+    Since we pass a naive DTSTART to rrulestr(), we must also strip the
+    UTC indicator from UNTIL to avoid a ValueError.
+    """
+    return re.sub(r"(UNTIL=\d{8}T\d{6})Z", r"\1", rrule_str)
+
+
 def _make_rrule_set(ev: CalendarEvent) -> rruleset:
     """Build a dateutil rruleset from an event's RRULE + EXDATE + RDATE."""
     rset = rruleset()
@@ -164,7 +174,7 @@ def _make_rrule_set(ev: CalendarEvent) -> rruleset:
     dtstart = ev.dtstart
     naive_start = _to_naive(dtstart)
 
-    parsed = rrulestr(ev.rrule, dtstart=naive_start)
+    parsed = rrulestr(_strip_until_tz(ev.rrule), dtstart=naive_start)
     if not isinstance(parsed, rrule):
         msg = f"Expected single rrule, got {type(parsed).__name__}"
         raise TypeError(msg)
@@ -298,30 +308,87 @@ def _in_date_range(
     return not (to_date and ev_start >= to_date)
 
 
+def _scan_ics_files(
+    base: Path,
+    calendar_filter: str | None,
+) -> list[tuple[Path, str]]:
+    """Discover .ics files using os.scandir (much faster than glob).
+
+    Handles two directory levels to support nested calendars like
+    ``clan/personal``.  Returns ``[(path, calendar_name), ...]``.
+    """
+    if not base.is_dir():
+        return []
+
+    cal_filter_lower = calendar_filter.lower() if calendar_filter else None
+    ics_files: list[tuple[Path, str]] = []
+
+    for entry in os.scandir(base):
+        if not entry.is_dir(follow_symlinks=True):
+            continue
+        cal_name = entry.name
+        if cal_filter_lower and cal_name.lower() != cal_filter_lower:
+            # Check nested calendars before skipping
+            _scan_nested(entry.path, cal_name, cal_filter_lower, ics_files)
+            continue
+        _collect_ics_in_dir(entry.path, cal_name, ics_files)
+        # Also check nested subdirectories (e.g. clan/personal)
+        _scan_nested(entry.path, cal_name, cal_filter_lower, ics_files)
+
+    return ics_files
+
+
+def _collect_ics_in_dir(
+    dir_path: str,
+    cal_name: str,
+    out: list[tuple[Path, str]],
+) -> None:
+    """Append all .ics files in *dir_path* to *out*."""
+    out.extend(
+        (Path(f.path), cal_name)
+        for f in os.scandir(dir_path)
+        if f.is_file(follow_symlinks=True) and f.name.endswith(".ics")
+    )
+
+
+def _scan_nested(
+    parent_path: str,
+    parent_name: str,
+    cal_filter_lower: str | None,
+    out: list[tuple[Path, str]],
+) -> None:
+    """Scan one level of nested calendar directories."""
+    for sub in os.scandir(parent_path):
+        if not sub.is_dir(follow_symlinks=True):
+            continue
+        nested_cal = f"{parent_name}/{sub.name}"
+        if cal_filter_lower and nested_cal.lower() != cal_filter_lower:
+            continue
+        _collect_ics_in_dir(sub.path, nested_cal, out)
+
+
+def _cache_path_for(calendars_dir: str | None) -> Path | None:
+    """Derive a cache DB path scoped to the calendars directory.
+
+    Returns ``None`` when no suitable cache location can be determined.
+    """
+    base = _resolve_calendars_dir(calendars_dir)
+    cache_home = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    # Hash the base path so different calendar dirs get separate caches
+    key = sha1(str(base).encode(), usedforsecurity=False).hexdigest()[:12]
+    return Path(cache_home) / "calendar-cli" / f"cache-{key}.db"
+
+
 def _collect_raw_events(
     calendars_dir: str | None,
     calendar_filter: str | None,
 ) -> list[CalendarEvent]:
-    """Read all .ics files and return parsed CalendarEvents."""
+    """Read all .ics files and return parsed CalendarEvents (cached)."""
     base = _resolve_calendars_dir(calendars_dir)
-    if not base.is_dir():
+    ics_files = _scan_ics_files(base, calendar_filter)
+    if not ics_files:
         return []
-
-    all_cals = discover_calendars(calendars_dir)
-    if calendar_filter:
-        resolved = _resolve_calendar_name(base, calendar_filter)
-        cal_names = [resolved] if resolved in all_cals else [calendar_filter]
-    else:
-        cal_names = all_cals
-
-    events: list[CalendarEvent] = []
-    for cal_name in cal_names:
-        cal_dir = base / cal_name
-        if not cal_dir.is_dir():
-            continue
-        for ics_file in cal_dir.glob("*.ics"):
-            events.extend(read_event_file(ics_file, cal_name))
-    return events
+    return cached_collect_events(ics_files, db_path=_cache_path_for(calendars_dir))
 
 
 def _split_masters_overrides(
@@ -446,16 +513,11 @@ def get_event(
     uid: str,
     calendars_dir: str | None = None,
 ) -> CalendarEvent | None:
-    """Find a single event by UID."""
-    base = _resolve_calendars_dir(calendars_dir)
-    if not base.is_dir():
-        return None
-    for cal_name in discover_calendars(calendars_dir):
-        cal_dir = base / cal_name
-        for ics_file in cal_dir.glob("*.ics"):
-            for ev in read_event_file(ics_file, cal_name):
-                if ev.uid == uid:
-                    return ev
+    """Find a single event by UID (uses cache)."""
+    all_events = _collect_raw_events(calendars_dir, calendar_filter=None)
+    for ev in all_events:
+        if ev.uid == uid:
+            return ev
     return None
 
 

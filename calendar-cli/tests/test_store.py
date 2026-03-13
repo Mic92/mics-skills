@@ -689,6 +689,43 @@ def test_rrule_expansion_with_rdate(tmp_path: Path) -> None:
     assert date(2025, 4, 10) in dates
 
 
+def test_rrule_with_utc_until(tmp_path: Path) -> None:
+    """RRULE UNTIL with Z suffix must not crash when dtstart is tz-aware.
+
+    dateutil requires UNTIL and DTSTART to have matching tz-awareness.
+    Since we strip tzinfo from DTSTART for rrule expansion, we must
+    also strip the Z (UTC) from UNTIL in the RRULE string.
+    """
+    cal_dir = setup_single_calendar(
+        tmp_path,
+        make_ics(
+            ICSEvent(
+                uid="until-utc@example.com",
+                summary="Recurring with UNTIL Z",
+                dtstart=";TZID=Europe/Berlin:20250401T090000",
+                dtend=";TZID=Europe/Berlin:20250401T100000",
+                vevent_lines=[
+                    "RRULE:FREQ=WEEKLY;UNTIL=20250422T070000Z",
+                ],
+            )
+        ),
+        filename="until-utc.ics",
+    )
+
+    events = store.list_events(
+        calendars_dir=cal_dir,
+        from_date=date(2025, 4, 1),
+        to_date=date(2025, 4, 23),
+    )
+    assert len(events) >= 1
+    assert events[0].summary == "Recurring with UNTIL Z"
+    # Should have weekly occurrences: Apr 1, 8, 15, 22
+    dates = [e.dtstart.date() for e in events]  # type: ignore[union-attr]
+    assert date(2025, 4, 1) in dates
+    assert date(2025, 4, 8) in dates
+    assert date(2025, 4, 15) in dates
+
+
 # ---------------------------------------------------------------------------
 # Issue #8: Absolute alarm triggers
 # ---------------------------------------------------------------------------

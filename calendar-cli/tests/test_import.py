@@ -91,20 +91,20 @@ END:VCALENDAR
     email_file.write_text(email_content)
 
     cal_dir = str(tmp_path / "calendars")
-    result = main(["--calendar-dir", cal_dir, "--no-sync", "import", str(email_file)])
+    result = main(["--calendar-dir", cal_dir, "import", str(email_file)])
     assert result == 0
 
 
 def test_import_invalid_ics(tmp_path: Path) -> None:
     """Test importing invalid ICS file fails."""
     (tmp_path / "invalid.ics").write_text("This is not a valid ICS file")
-    result = main(["--no-sync", "import", str(tmp_path / "invalid.ics")])
+    result = main(["import", str(tmp_path / "invalid.ics")])
     assert result == 1
 
 
 def test_import_nonexistent_file() -> None:
     """Test importing non-existent file fails."""
-    result = main(["--no-sync", "import", "/non/existent/file.ics"])
+    result = main(["import", "/non/existent/file.ics"])
     assert result == 1
 
 
@@ -260,7 +260,7 @@ def test_import_from_stdin(
 
     cal_dir = str(tmp_path / "calendars")
     with patch("calendar_cli.import_invite.subprocess.run"):
-        result = main(["--calendar-dir", cal_dir, "--no-sync", "import"])
+        result = main(["--calendar-dir", cal_dir, "import"])
 
     assert result == 0
     captured = capsys.readouterr()

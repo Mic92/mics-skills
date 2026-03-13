@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 from datetime import UTC, date, datetime, timedelta
@@ -54,17 +55,21 @@ def _format_dt(dt: datetime | date) -> str:
     return dt.isoformat()
 
 
+_vdirsyncer_available: bool | None = None
+
+
 def _sync() -> None:
-    """Run vdirsyncer sync (silently)."""
-    try:
-        result = subprocess.run(
-            ["vdirsyncer", "sync"],
-            check=False,
-            capture_output=True,
-        )
-    except FileNotFoundError:
-        print("Warning: vdirsyncer not found, skipping sync", file=sys.stderr)
+    """Run vdirsyncer sync (silently).  Skips if vdirsyncer is not on PATH."""
+    global _vdirsyncer_available  # noqa: PLW0603
+    if _vdirsyncer_available is None:
+        _vdirsyncer_available = shutil.which("vdirsyncer") is not None
+    if not _vdirsyncer_available:
         return
+    result = subprocess.run(
+        ["vdirsyncer", "sync"],
+        check=False,
+        capture_output=True,
+    )
     if result.returncode != 0:
         stderr = result.stderr.decode(errors="replace").strip()
         print(f"Warning: vdirsyncer sync failed: {stderr}", file=sys.stderr)
@@ -275,8 +280,7 @@ def cmd_new(args: argparse.Namespace) -> int:
         alarm_minutes=alarm_minutes,
     )
 
-    if args.sync:
-        _sync()
+    _sync()
 
     print(f"Created: {ev.uid}")
     _print_event(ev)
@@ -321,8 +325,7 @@ def cmd_edit(args: argparse.Namespace) -> int:
         msg = f"Event not found: {args.uid}"
         raise EventNotFoundError(msg)
 
-    if args.sync:
-        _sync()
+    _sync()
 
     print(f"Updated: {ev.uid}")
     _print_event(ev)
@@ -334,8 +337,7 @@ def cmd_delete(args: argparse.Namespace) -> int:
         msg = f"Event not found: {args.uid}"
         raise EventNotFoundError(msg)
 
-    if args.sync:
-        _sync()
+    _sync()
 
     print(f"Deleted: {args.uid}")
     return 0
@@ -388,9 +390,9 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Calendar root dir (default: {store.DEFAULT_CALENDARS_DIR} or $CALENDAR_DIR)",
     )
     parser.add_argument(
-        "--no-sync",
+        "--sync",
         action="store_true",
-        help="Skip vdirsyncer sync",
+        help="Run vdirsyncer sync before the command",
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
@@ -587,13 +589,13 @@ def _global_flag_parser() -> argparse.ArgumentParser:
     """Parser that only knows global flags, used to extract them from remaining args."""
     p = argparse.ArgumentParser(add_help=False)
     p.add_argument("--calendar-dir", default=None)
-    p.add_argument("--no-sync", action="store_true")
+    p.add_argument("--sync", action="store_true")
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    # Use parse_known_args so global flags (--no-sync, --calendar-dir)
+    # Use parse_known_args so global flags (--sync, --calendar-dir)
     # are accepted both before and after the subcommand.
     args, remaining = parser.parse_known_args(argv)
     if remaining:
@@ -604,11 +606,8 @@ def main(argv: list[str] | None = None) -> int:
             parser.parse_args(argv)
         if extra.calendar_dir is not None:
             args.calendar_dir = extra.calendar_dir
-        if extra.no_sync:
-            args.no_sync = True
-
-    # Inject sync flag (inverted from --no-sync)
-    args.sync = not args.no_sync
+        if extra.sync:
+            args.sync = True
 
     dispatch = {
         "calendars": cmd_calendars,

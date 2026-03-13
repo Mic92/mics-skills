@@ -24,4 +24,5 @@ packages = ["calendar_cli"]
 [tool.pytest.ini_options]
 # Make tests/ importable so test modules can share helpers via conftest.
 pythonpath = ["tests"]
+addopts = "-n auto"
 
