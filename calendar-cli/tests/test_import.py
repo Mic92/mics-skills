@@ -30,7 +30,9 @@ def _find_imported_ics(base: Path) -> list[Path]:
 
 
 def _parse_imported(path: Path) -> Calendar:
-    return Calendar.from_ical(path.read_bytes())
+    cal = Calendar.from_ical(path.read_text())
+    assert isinstance(cal, Calendar)
+    return cal
 
 
 def test_import_basic_ics(tmp_path: Path) -> None:

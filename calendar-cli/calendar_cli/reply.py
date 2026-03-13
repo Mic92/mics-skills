@@ -12,7 +12,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from icalendar import Calendar, Event, vCalAddress, vText
+from icalendar import Calendar, Component, Event, vCalAddress, vText
 
 from .config import resolve_user_name
 from .errors import InvalidInputError, ParseError, SendError
@@ -54,10 +54,10 @@ def extract_calendar_from_email(
     parts = extract_calendar_parts_from_email(content_bytes)
     for part_data in parts:
         try:
-            cal = Calendar.from_ical(part_data)
+            cal = Calendar.from_ical(part_data.decode())
             if isinstance(cal, Calendar):
                 return cal, to_email
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, UnicodeDecodeError):
             continue
 
     # Fallback: try to parse the raw content as ICS directly
@@ -200,7 +200,7 @@ def send_reply(
     return True
 
 
-def _set_attendee_partstat(cal: Calendar, user_email: str, ical_status: str) -> bool:
+def _set_attendee_partstat(cal: Component, user_email: str, ical_status: str) -> bool:
     """Set PARTSTAT for *user_email* in all VEVENTs of *cal*. Returns True if changed."""
     changed = False
     lower_email = user_email.lower()
@@ -245,7 +245,7 @@ def _update_local_partstat(
             continue
 
         try:
-            cal = Calendar.from_ical(existing.read_bytes())
+            cal = Calendar.from_ical(existing.read_text())
         except (ValueError, OSError):
             continue
 

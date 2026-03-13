@@ -82,7 +82,7 @@ def test_invite_with_timezone(tmp_path: Path) -> None:
     )
 
     assert result == 0
-    cal = Calendar.from_ical(ics_file.read_bytes())
+    cal = Calendar.from_ical(ics_file.read_text())
     event = next(iter(cal.walk("VEVENT")))
     assert str(event["SUMMARY"]) == "Berlin Meeting"
     dtstart = event["DTSTART"].dt
@@ -103,7 +103,7 @@ def test_invite_with_recurrence(tmp_path: Path) -> None:
     )
 
     assert result == 0
-    cal = Calendar.from_ical(ics_file.read_bytes())
+    cal = Calendar.from_ical(ics_file.read_text())
     event = next(iter(cal.walk("VEVENT")))
     rrule = event["RRULE"]
     assert rrule["FREQ"] == ["WEEKLY"]

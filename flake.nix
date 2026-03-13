@@ -70,10 +70,19 @@
             programs.mypy.enable = true;
             programs.mypy.directories = {
               "calendar-cli" = {
-                extraPythonPackages = with pkgs.python3.pkgs; [
-                  icalendar
-                  pytest
-                ];
+                extraPythonPackages =
+                  let
+                    types-icalendar = pkgs.callPackage ./calendar-cli/types-icalendar.nix {
+                      python = pkgs.python3;
+                    };
+                  in
+                  with pkgs.python3.pkgs;
+                  [
+                    icalendar
+                    pytest
+                    types-icalendar
+                    types-python-dateutil
+                  ];
               };
               "pexpect-cli" = {
                 extraPythonPackages = with pkgs.python3.pkgs; [

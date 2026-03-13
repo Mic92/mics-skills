@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from icalendar import Calendar, Event
+from icalendar import Calendar, Component
 
 from .store import atomic_write, generate_uid, uid_to_filename
 from .timeutil import normalize_windows_tzid
@@ -33,7 +33,7 @@ class ImportConfig:
 extract_calendar_from_email = extract_calendar_parts_from_email
 
 
-def _collect_tzids(events: list[Event]) -> set[str]:
+def _collect_tzids(events: list[Component]) -> set[str]:
     """Return TZID strings referenced by date properties in events."""
     tzids: set[str] = set()
     for event in events:
@@ -47,8 +47,8 @@ def _collect_tzids(events: list[Event]) -> set[str]:
 
 
 def _build_per_uid_calendar(
-    events: list[Event],
-    timezones: dict[str, object],
+    events: list[Component],
+    timezones: dict[str, Component],
 ) -> bytes:
     """Build a VCALENDAR containing all events for one UID plus their timezones."""
     out_cal = new_calendar()
@@ -85,7 +85,7 @@ def _find_existing_ics(uid: str, calendars_dir: str) -> Path | None:
             # Fallback: parse each file to extract UID properly
             for ics_file in ics_dir.glob("*.ics"):
                 try:
-                    cal = Calendar.from_ical(ics_file.read_bytes())
+                    cal = Calendar.from_ical(ics_file.read_text())
                     for component in cal.walk():
                         if (
                             component.name == "VEVENT"
@@ -98,7 +98,7 @@ def _find_existing_ics(uid: str, calendars_dir: str) -> Path | None:
 
 
 def _handle_cancel(
-    events_by_uid: dict[str, list[Event]],
+    events_by_uid: dict[str, list[Component]],
     calendars_dir: str,
 ) -> int:
     """Handle METHOD:CANCEL — delete or mark matching events as CANCELLED.
@@ -122,7 +122,7 @@ def _handle_cancel(
 
 
 def _extract_reply_statuses(
-    reply_events: list[Event],
+    reply_events: list[Component],
 ) -> list[tuple[str, str]]:
     """Extract (email, new_partstat) pairs from REPLY VEVENTs."""
     result: list[tuple[str, str]] = []
@@ -135,7 +135,7 @@ def _extract_reply_statuses(
 
 
 def _apply_partstat_updates(
-    cal: Calendar,
+    cal: Component,
     updates: list[tuple[str, str]],
     uid: str,
 ) -> int:
@@ -155,7 +155,7 @@ def _apply_partstat_updates(
 
 
 def _handle_reply(
-    events_by_uid: dict[str, list[Event]],
+    events_by_uid: dict[str, list[Component]],
     calendars_dir: str,
 ) -> int:
     """Handle METHOD:REPLY — update PARTSTAT for the replying attendee.
@@ -170,7 +170,7 @@ def _handle_reply(
             continue
 
         try:
-            cal = Calendar.from_ical(existing.read_bytes())
+            cal = Calendar.from_ical(existing.read_text())
         except (ValueError, OSError):
             continue
 
@@ -182,11 +182,11 @@ def _handle_reply(
 
 
 def _collect_components(
-    cal: Calendar,
-) -> tuple[dict[str, object], dict[str, list[Event]]]:
+    cal: Component,
+) -> tuple[dict[str, Component], dict[str, list[Component]]]:
     """Collect VTIMEZONEs and group VEVENTs by UID from a parsed calendar."""
-    timezones: dict[str, object] = {}
-    events_by_uid: dict[str, list[Event]] = {}
+    timezones: dict[str, Component] = {}
+    events_by_uid: dict[str, list[Component]] = {}
     for component in cal.walk():
         if component.name == "VTIMEZONE":
             raw_tzid = component.get("TZID")
@@ -243,8 +243,8 @@ def import_to_local(
     - Writes are atomic (tempfile + rename)
     """
     try:
-        cal = Calendar.from_ical(calendar_data)
-    except (ValueError, TypeError) as e:
+        cal = Calendar.from_ical(calendar_data.decode())
+    except (ValueError, TypeError, UnicodeDecodeError) as e:
         print(f"Error parsing calendar data: {e}", file=sys.stderr)
         return False
 
@@ -322,8 +322,8 @@ def process_input(file_path: str | None) -> list[bytes]:
 def _calendar_has_rsvp(cal_data: bytes) -> bool:
     """Check if calendar data contains RSVP requests by parsing the iCalendar structure."""
     try:
-        cal = Calendar.from_ical(cal_data)
-    except (ValueError, TypeError):
+        cal = Calendar.from_ical(cal_data.decode())
+    except (ValueError, TypeError, UnicodeDecodeError):
         return False
     for component in cal.walk():
         if component.name != "VEVENT":
