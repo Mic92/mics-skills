@@ -49,8 +49,13 @@ def _parse_date(s: str) -> date:
         raise InvalidInputError(msg) from None
 
 
+_LOCAL_TZ = datetime.now().astimezone().tzinfo
+
+
 def _format_dt(dt: datetime | date) -> str:
     if isinstance(dt, datetime):
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(_LOCAL_TZ)
         return dt.strftime("%Y-%m-%d %H:%M %Z")
     return dt.isoformat()
 
