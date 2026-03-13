@@ -22,9 +22,9 @@ from pathlib import Path
 from dateutil.rrule import rrule, rruleset, rrulestr
 from icalendar import Alarm, Calendar, Component, Event
 
+from .cache import cached_collect_events
 from .errors import CalendarNotFoundError, InvalidInputError
 from .models import CalendarEvent
-from .parse import read_event_file
 from .timeutil import (
     coerce_to_datetime,
     default_duration,
@@ -308,14 +308,14 @@ def _in_date_range(
     return not (to_date and ev_start >= to_date)
 
 
-def _collect_raw_events(
+def _discover_ics_files(
     calendars_dir: str | None,
     calendar_filter: str | None,
-) -> list[CalendarEvent]:
-    """Read all .ics files and return parsed CalendarEvents."""
+) -> tuple[list[tuple[Path, str]], Path]:
+    """Return ``[(path, calendar_name), ...]`` for all relevant .ics files."""
     base = _resolve_calendars_dir(calendars_dir)
     if not base.is_dir():
-        return []
+        return [], base
 
     all_cals = discover_calendars(calendars_dir)
     if calendar_filter:
@@ -324,14 +324,24 @@ def _collect_raw_events(
     else:
         cal_names = all_cals
 
-    events: list[CalendarEvent] = []
+    ics_files: list[tuple[Path, str]] = []
     for cal_name in cal_names:
         cal_dir = base / cal_name
         if not cal_dir.is_dir():
             continue
-        for ics_file in cal_dir.glob("*.ics"):
-            events.extend(read_event_file(ics_file, cal_name))
-    return events
+        ics_files.extend((ics_file, cal_name) for ics_file in cal_dir.glob("*.ics"))
+    return ics_files, base
+
+
+def _collect_raw_events(
+    calendars_dir: str | None,
+    calendar_filter: str | None,
+) -> list[CalendarEvent]:
+    """Read all .ics files and return parsed CalendarEvents (cached)."""
+    ics_files, _base = _discover_ics_files(calendars_dir, calendar_filter)
+    if not ics_files:
+        return []
+    return cached_collect_events(ics_files)
 
 
 def _split_masters_overrides(
@@ -456,16 +466,11 @@ def get_event(
     uid: str,
     calendars_dir: str | None = None,
 ) -> CalendarEvent | None:
-    """Find a single event by UID."""
-    base = _resolve_calendars_dir(calendars_dir)
-    if not base.is_dir():
-        return None
-    for cal_name in discover_calendars(calendars_dir):
-        cal_dir = base / cal_name
-        for ics_file in cal_dir.glob("*.ics"):
-            for ev in read_event_file(ics_file, cal_name):
-                if ev.uid == uid:
-                    return ev
+    """Find a single event by UID (uses cache)."""
+    all_events = _collect_raw_events(calendars_dir, calendar_filter=None)
+    for ev in all_events:
+        if ev.uid == uid:
+            return ev
     return None
 
 

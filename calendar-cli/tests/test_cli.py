@@ -322,8 +322,8 @@ def test_all_day_end_before_start(
 def test_global_flags_after_subcommand(
     cal_dir: str, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Global flags like --no-sync and --calendar-dir work after the subcommand."""
-    result = main(["calendars", "--calendar-dir", cal_dir, "--no-sync"])
+    """Global flags like --calendar-dir work after the subcommand."""
+    result = main(["calendars", "--calendar-dir", cal_dir])
     assert result == 0
     out = capsys.readouterr().out
     assert "personal" in out

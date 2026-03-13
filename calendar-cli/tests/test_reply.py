@@ -413,7 +413,6 @@ def test_reply_updates_local_partstat(mock_run: MagicMock, tmp_path: Path) -> No
         [
             "--calendar-dir",
             str(cal_dir),
-            "--no-sync",
             "reply",
             "accept",
             str(email_file),

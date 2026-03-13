@@ -9,6 +9,9 @@ description: Manage calendar events and send meeting invitations. Use for listin
   creating or editing events. Ask the user if unclear.
 - Run `calendar-cli calendars` first to discover available calendar names.
   Calendar names are resolved case-insensitively.
+- `list`, `show`, and `search` do **not** sync by default (fast, uses local
+  cache). Pass `--sync` to pull remote changes first.
+- `new`, `edit`, and `delete` always sync after the operation.
 - `list` shows at most 50 events by default and truncates descriptions.
   Use `show <uid>` to get full details of a specific event.
 

@@ -194,8 +194,8 @@ def setup_single_calendar(
 
 
 def run_cli(cal_dir: str, *args: str) -> int:
-    """Run calendar-cli with --no-sync and the given calendar dir."""
-    return main(["--calendar-dir", cal_dir, "--no-sync", *args])
+    """Run calendar-cli with the given calendar dir (sync is off by default)."""
+    return main(["--calendar-dir", cal_dir, *args])
 
 
 @dataclass
@@ -215,7 +215,6 @@ class InviteArgs:
 def run_invite(tmp_path: Path, invite: InviteArgs) -> int:
     """Run the ``invite`` subcommand with common defaults."""
     args: list[str] = [
-        "--no-sync",
         "invite",
         "-s",
         invite.summary,
