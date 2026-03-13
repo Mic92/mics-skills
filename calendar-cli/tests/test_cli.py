@@ -359,6 +359,22 @@ def test_list_limit_zero_shows_all(
     assert "more event(s) not shown" not in out
 
 
+def test_list_verbose_shows_day_headers(
+    cal_dir: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Verbose list groups events under day headers on their own line."""
+    # The fixture has events on 2025-04-01 and 2025-04-02
+    result = run_cli(
+        cal_dir, "list", "-v", "--from", "2025-04-01", "--to", "2025-04-03"
+    )
+    assert result == 0
+    out = capsys.readouterr().out
+    # Day headers must be standalone lines (not part of an event line)
+    lines = [line.strip() for line in out.splitlines()]
+    assert "Tue 2025-04-01:" in lines
+    assert "Wed 2025-04-02:" in lines
+
+
 def test_list_verbose_truncates_description(
     cal_dir: str, capsys: pytest.CaptureFixture[str]
 ) -> None:

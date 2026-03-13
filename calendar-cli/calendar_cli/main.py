@@ -166,6 +166,39 @@ def _format_time_range(ev: store.CalendarEvent) -> str:
     return start
 
 
+def _format_time_only(dt: datetime | date) -> str:
+    """Format just the time portion (HH:MM) for a datetime, or 'all day' for dates."""
+    if isinstance(dt, datetime):
+        local = dt.astimezone(_LOCAL_TZ) if dt.tzinfo else dt
+        return local.strftime("%H:%M")
+    return "all day"
+
+
+def _format_compact_time_range(ev: store.CalendarEvent) -> str:
+    """Format the time range without the date (for use under a day header).
+
+    Timed events: ``12:00 - 13:00``
+    All-day single-day: ``all day``
+    All-day multi-day: ``Tue 2025-04-01 - Thu 2025-04-03`` (full range kept)
+    """
+    if ev.is_all_day:
+        if ev.dtend is not None:
+            assert isinstance(ev.dtstart, date)
+            assert isinstance(ev.dtend, date)
+            days = (ev.dtend - ev.dtstart).days
+            if days <= 1:
+                return "all day"
+        else:
+            return "all day"
+        # Multi-day all-day: show full range
+        return _format_time_range(ev)
+    start = _format_time_only(ev.dtstart)
+    end = _format_end(ev.dtstart, ev.dtend)
+    if end:
+        return f"{start} \N{EN DASH} {end}"
+    return start
+
+
 def _ev_date(ev: store.CalendarEvent) -> date:
     """Return the local date for an event's start."""
     dt = ev.dtstart
@@ -190,12 +223,14 @@ def _print_event(
     *,
     verbose: bool = False,
     full: bool = False,
+    compact: bool = False,
 ) -> None:
-    time_range = _format_time_range(ev)
+    time_range = _format_compact_time_range(ev) if compact else _format_time_range(ev)
+    indent = "  " if compact else ""
     sc = _status_color(ev.status)
     status = f" {sc}[{ev.status}]{_RESET}" if ev.status not in _QUIET_STATUSES else ""
     print(
-        f"{_CYAN}{time_range}{_RESET}  "
+        f"{indent}{_CYAN}{time_range}{_RESET}  "
         f"{_BOLD}{ev.summary}{_RESET}{status} "
         f"{_DIM}| {ev.calendar} [{ev.uid}]{_RESET}"
     )
@@ -240,19 +275,29 @@ def _print_detail(ev: store.CalendarEvent, *, full: bool = False) -> None:
         _print_field("Alarms", ", ".join(ev.alarms), color=_YELLOW)
 
 
+def _format_day_header(d: date) -> str:
+    """Format a day header like 'Tue 2025-04-01:'."""
+    return f"{_BOLD}{d.strftime('%a %Y-%m-%d')}:{_RESET}"
+
+
 def _print_event_list(
     events: list[store.CalendarEvent],
     *,
     verbose: bool = False,
 ) -> None:
-    """Print events with blank-line separators between different days."""
+    """Print events, optionally grouped under day headers (verbose mode)."""
     prev_date: date | None = None
     for ev in events:
         ev_date = _ev_date(ev)
-        if prev_date is not None and ev_date != prev_date:
+        if verbose:
+            if ev_date != prev_date:
+                if prev_date is not None:
+                    print()
+                print(_format_day_header(ev_date))
+        elif prev_date is not None and ev_date != prev_date:
             print()
         prev_date = ev_date
-        _print_event(ev, verbose=verbose)
+        _print_event(ev, verbose=verbose, compact=verbose)
 
 
 # ---------------------------------------------------------------------------
