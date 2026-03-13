@@ -308,29 +308,63 @@ def _in_date_range(
     return not (to_date and ev_start >= to_date)
 
 
-def _discover_ics_files(
-    calendars_dir: str | None,
+def _scan_ics_files(
+    base: Path,
     calendar_filter: str | None,
-) -> tuple[list[tuple[Path, str]], Path]:
-    """Return ``[(path, calendar_name), ...]`` for all relevant .ics files."""
-    base = _resolve_calendars_dir(calendars_dir)
+) -> list[tuple[Path, str]]:
+    """Discover .ics files using os.scandir (much faster than glob).
+
+    Handles two directory levels to support nested calendars like
+    ``clan/personal``.  Returns ``[(path, calendar_name), ...]``.
+    """
     if not base.is_dir():
-        return [], base
+        return []
 
-    all_cals = discover_calendars(calendars_dir)
-    if calendar_filter:
-        resolved = _resolve_calendar_name(base, calendar_filter)
-        cal_names = [resolved] if resolved in all_cals else [calendar_filter]
-    else:
-        cal_names = all_cals
-
+    cal_filter_lower = calendar_filter.lower() if calendar_filter else None
     ics_files: list[tuple[Path, str]] = []
-    for cal_name in cal_names:
-        cal_dir = base / cal_name
-        if not cal_dir.is_dir():
+
+    for entry in os.scandir(base):
+        if not entry.is_dir(follow_symlinks=True):
             continue
-        ics_files.extend((ics_file, cal_name) for ics_file in cal_dir.glob("*.ics"))
-    return ics_files, base
+        cal_name = entry.name
+        if cal_filter_lower and cal_name.lower() != cal_filter_lower:
+            # Check nested calendars before skipping
+            _scan_nested(entry.path, cal_name, cal_filter_lower, ics_files)
+            continue
+        _collect_ics_in_dir(entry.path, cal_name, ics_files)
+        # Also check nested subdirectories (e.g. clan/personal)
+        _scan_nested(entry.path, cal_name, cal_filter_lower, ics_files)
+
+    return ics_files
+
+
+def _collect_ics_in_dir(
+    dir_path: str,
+    cal_name: str,
+    out: list[tuple[Path, str]],
+) -> None:
+    """Append all .ics files in *dir_path* to *out*."""
+    out.extend(
+        (Path(f.path), cal_name)
+        for f in os.scandir(dir_path)
+        if f.is_file(follow_symlinks=True) and f.name.endswith(".ics")
+    )
+
+
+def _scan_nested(
+    parent_path: str,
+    parent_name: str,
+    cal_filter_lower: str | None,
+    out: list[tuple[Path, str]],
+) -> None:
+    """Scan one level of nested calendar directories."""
+    for sub in os.scandir(parent_path):
+        if not sub.is_dir(follow_symlinks=True):
+            continue
+        nested_cal = f"{parent_name}/{sub.name}"
+        if cal_filter_lower and nested_cal.lower() != cal_filter_lower:
+            continue
+        _collect_ics_in_dir(sub.path, nested_cal, out)
 
 
 def _cache_path_for(calendars_dir: str | None) -> Path | None:
@@ -350,7 +384,8 @@ def _collect_raw_events(
     calendar_filter: str | None,
 ) -> list[CalendarEvent]:
     """Read all .ics files and return parsed CalendarEvents (cached)."""
-    ics_files, _base = _discover_ics_files(calendars_dir, calendar_filter)
+    base = _resolve_calendars_dir(calendars_dir)
+    ics_files = _scan_ics_files(base, calendar_filter)
     if not ics_files:
         return []
     return cached_collect_events(ics_files, db_path=_cache_path_for(calendars_dir))
