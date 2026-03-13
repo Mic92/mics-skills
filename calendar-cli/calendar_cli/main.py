@@ -8,7 +8,7 @@ import os
 import shutil
 import subprocess
 import sys
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, tzinfo
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -53,7 +53,7 @@ def _parse_date(s: str) -> date:
         raise InvalidInputError(msg) from None
 
 
-def _detect_local_tz() -> datetime.tzinfo:
+def _detect_local_tz() -> tzinfo:
     """Detect the system's local timezone as a ZoneInfo object.
 
     Falls back to a fixed UTC offset if detection fails.  Uses a proper
@@ -76,7 +76,10 @@ def _detect_local_tz() -> datetime.tzinfo:
         with contextlib.suppress(KeyError, OSError):
             return ZoneInfo(tz_file.read_text().strip())
 
-    return datetime.now(tz=UTC).astimezone().tzinfo  # type: ignore[return-value]
+    # Last resort: fixed offset from system clock
+    now = datetime.now(tz=UTC).astimezone()
+    assert now.tzinfo is not None  # guaranteed by astimezone()
+    return now.tzinfo
 
 
 _LOCAL_TZ = _detect_local_tz()
@@ -86,8 +89,24 @@ def _format_dt(dt: datetime | date) -> str:
     if isinstance(dt, datetime):
         if dt.tzinfo is not None:
             dt = dt.astimezone(_LOCAL_TZ)
-        return dt.strftime("%a %Y-%m-%d %H:%M %Z")
+        return dt.strftime("%a %Y-%m-%d %H:%M")
     return dt.strftime("%a %Y-%m-%d")
+
+
+def _format_end(dtstart: datetime | date, dtend: datetime | date | None) -> str:
+    """Format the end time, omitting the date when it matches the start."""
+    if dtend is None:
+        return ""
+    if isinstance(dtstart, datetime) and isinstance(dtend, datetime):
+        start_local = dtstart.astimezone(_LOCAL_TZ) if dtstart.tzinfo else dtstart
+        end_local = dtend.astimezone(_LOCAL_TZ) if dtend.tzinfo else dtend
+        if start_local.date() == end_local.date():
+            return end_local.strftime("%H:%M")
+    return _format_dt(dtend)
+
+
+# Statuses that are the default / uninteresting — suppress from display
+_QUIET_STATUSES = {"", "CONFIRMED"}
 
 
 _vdirsyncer_available: bool | None = None
@@ -120,17 +139,23 @@ def _truncate(text: str, max_len: int) -> str:
     return text[: max_len - 1] + "…"
 
 
-def _format_end(dtstart: datetime | date, dtend: datetime | date | None) -> str:
-    """Format the end time, omitting the date when it matches the start."""
-    if dtend is None:
-        return ""
-    if isinstance(dtstart, datetime) and isinstance(dtend, datetime):
-        start_local = dtstart.astimezone(_LOCAL_TZ) if dtstart.tzinfo else dtstart
-        end_local = dtend.astimezone(_LOCAL_TZ) if dtend.tzinfo else dtend
-        if start_local.date() == end_local.date():
-            # Same day — show only time
-            return end_local.strftime("%H:%M %Z").rstrip()
-    return _format_dt(dtend)
+def _format_time_range(ev: store.CalendarEvent) -> str:
+    """Format the start-end time range for display."""
+    start = _format_dt(ev.dtstart)
+    end = _format_end(ev.dtstart, ev.dtend)
+    if end:
+        return f"{start} \N{EN DASH} {end}"
+    return start
+
+
+def _ev_date(ev: store.CalendarEvent) -> date:
+    """Return the local date for an event's start."""
+    dt = ev.dtstart
+    if isinstance(dt, datetime):
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(_LOCAL_TZ)
+        return dt.date()
+    return dt
 
 
 def _print_event(
@@ -139,10 +164,9 @@ def _print_event(
     verbose: bool = False,
     full: bool = False,
 ) -> None:
-    start = _format_dt(ev.dtstart)
-    end = _format_end(ev.dtstart, ev.dtend)
-    status = f" [{ev.status}]" if ev.status else ""
-    print(f"{start}  {end}  | {ev.summary}{status} | {ev.calendar} | [{ev.uid}]")
+    time_range = _format_time_range(ev)
+    status = f" [{ev.status}]" if ev.status not in _QUIET_STATUSES else ""
+    print(f"{time_range}  {ev.summary}{status} | {ev.calendar} [{ev.uid}]")
     if verbose or full:
         if ev.location:
             print(f"  Location: {ev.location}")
@@ -163,6 +187,21 @@ def _print_event(
             print(f"  Recurrence: {ev.rrule}")
         if ev.alarms:
             print(f"  Alarms: {', '.join(ev.alarms)}")
+
+
+def _print_event_list(
+    events: list[store.CalendarEvent],
+    *,
+    verbose: bool = False,
+) -> None:
+    """Print events with blank-line separators between different days."""
+    prev_date: date | None = None
+    for ev in events:
+        ev_date = _ev_date(ev)
+        if prev_date is not None and ev_date != prev_date:
+            print()
+        prev_date = ev_date
+        _print_event(ev, verbose=verbose)
 
 
 # ---------------------------------------------------------------------------
@@ -204,8 +243,7 @@ def cmd_list(args: argparse.Namespace) -> int:
 
     limit = args.limit
     shown = events[:limit] if limit else events
-    for ev in shown:
-        _print_event(ev, verbose=args.verbose)
+    _print_event_list(shown, verbose=args.verbose)
 
     remaining = len(events) - len(shown)
     if remaining > 0:
@@ -241,8 +279,7 @@ def cmd_search(args: argparse.Namespace) -> int:
 
     limit = args.limit
     shown = events[:limit] if limit else events
-    for ev in shown:
-        _print_event(ev, verbose=args.verbose)
+    _print_event_list(shown, verbose=args.verbose)
 
     remaining = len(events) - len(shown)
     if remaining > 0:
