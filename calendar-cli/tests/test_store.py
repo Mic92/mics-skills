@@ -947,3 +947,74 @@ def test_search_events_invalid_regex(cal_dir: str) -> None:
     """Invalid regex raises InvalidInputError."""
     with pytest.raises(InvalidInputError):
         store.search_events("[invalid", calendars_dir=cal_dir)
+
+
+def test_recurring_event_dst_transition(tmp_path: Path) -> None:
+    """Recurring events crossing a DST boundary must adjust UTC offset per occurrence.
+
+    Regression test: an event at 10:00 America/New_York recurs weekly.
+    Feb 23 is EST (UTC-5) → 10:00-05:00 = 15:00 UTC.
+    Mar 13 is EDT (UTC-4) → 10:00-04:00 = 14:00 UTC.
+    The wall-clock time stays 10:00 New York, but the UTC offset changes.
+    A cache round-trip through isoformat()/fromisoformat() was losing the
+    Olson timezone, replacing it with a fixed UTC offset, which caused all
+    occurrences to use the DTSTART offset regardless of DST.
+    """
+    # Use a VTIMEZONE so the ICS is realistic (matches real Google Calendar output)
+    ics = (
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "PRODID:-//test//test//\n"
+        "BEGIN:VTIMEZONE\n"
+        "TZID:America/New_York\n"
+        "BEGIN:DAYLIGHT\n"
+        "DTSTART:19700308T020000\n"
+        "RRULE:FREQ=YEARLY;BYDAY=2SU;BYMONTH=3\n"
+        "TZNAME:EDT\n"
+        "TZOFFSETFROM:-0500\n"
+        "TZOFFSETTO:-0400\n"
+        "END:DAYLIGHT\n"
+        "BEGIN:STANDARD\n"
+        "DTSTART:19701101T020000\n"
+        "RRULE:FREQ=YEARLY;BYDAY=1SU;BYMONTH=11\n"
+        "TZNAME:EST\n"
+        "TZOFFSETFROM:-0400\n"
+        "TZOFFSETTO:-0500\n"
+        "END:STANDARD\n"
+        "END:VTIMEZONE\n"
+        "BEGIN:VEVENT\n"
+        "UID:dst-recur@example.com\n"
+        "SUMMARY:DST Recurring\n"
+        "DTSTART;TZID=America/New_York:20260223T100000\n"
+        "DTEND;TZID=America/New_York:20260223T104000\n"
+        "RRULE:FREQ=WEEKLY;BYDAY=FR\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR\n"
+    )
+    cal_dir = setup_single_calendar(tmp_path, ics, filename="dst-recur.ics")
+
+    # Feb 27 (Fri) — still EST (UTC-5)
+    events_feb = store.list_events(
+        calendars_dir=cal_dir,
+        from_date=date(2026, 2, 27),
+        to_date=date(2026, 2, 28),
+    )
+    assert len(events_feb) == 1
+    feb_occ = events_feb[0]
+    assert isinstance(feb_occ.dtstart, datetime)
+    # 10:00 EST = 15:00 UTC
+    feb_utc = feb_occ.dtstart.astimezone(UTC)
+    assert feb_utc.hour == 15, f"Expected 15:00 UTC for EST occurrence, got {feb_utc}"
+
+    # Mar 13 (Fri) — EDT (UTC-4), DST has started on Mar 8
+    events_mar = store.list_events(
+        calendars_dir=cal_dir,
+        from_date=date(2026, 3, 13),
+        to_date=date(2026, 3, 14),
+    )
+    assert len(events_mar) == 1
+    mar_occ = events_mar[0]
+    assert isinstance(mar_occ.dtstart, datetime)
+    # 10:00 EDT = 14:00 UTC (NOT 15:00 which would be the bug)
+    mar_utc = mar_occ.dtstart.astimezone(UTC)
+    assert mar_utc.hour == 14, f"Expected 14:00 UTC for EDT occurrence, got {mar_utc}"
