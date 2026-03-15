@@ -7,7 +7,7 @@ from typing import Any
 from n8n_cli.client import Client
 from n8n_cli.errors import InputError
 from n8n_cli.output import emit, emit_json, emit_kv, emit_table, enc, read_json_input, ts
-from n8n_cli.strip import WORKFLOW_READONLY, strip_readonly
+from n8n_cli.strip import WORKFLOW_WRITABLE, keep_writable
 
 
 def _text_summary(wf: dict[str, Any]) -> None:
@@ -90,13 +90,13 @@ def cmd_workflow_create(client: Client, ns: Namespace) -> None:
 def cmd_workflow_update(client: Client, ns: Namespace) -> None:
     """Update a workflow from a full JSON definition.
 
-    Strips read-only fields (id, timestamps, tags, shared, pinData,
-    isArchived, etc.) before PUT so round-trip get→edit→update works.
+    Keeps only fields the public API PUT endpoint accepts so a
+    round-trip get→edit→update works without "additional properties" errors.
     """
     body = read_json_input(ns.file)
     if not isinstance(body, dict):
         raise InputError("Workflow JSON must be an object, not an array or scalar")
-    body = strip_readonly(body, WORKFLOW_READONLY)
+    body = keep_writable(body, WORKFLOW_WRITABLE)
     result = client.put(f"/workflows/{enc(ns.id)}", body)
     emit(result, use_json=ns.use_json, text_fn=_text_summary)
 

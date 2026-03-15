@@ -1,46 +1,52 @@
-"""Strip read-only fields before sending to n8n API.
+"""Filter request bodies to only include fields the n8n public API accepts.
 
-The n8n REST API returns metadata fields (timestamps, ownership, etc.)
-in GET responses that its PUT/PATCH endpoints reject.  These helpers
-remove them so a get→edit→update round-trip works cleanly.
+The n8n public API validates requests against its OpenAPI spec using
+express-openapi-validator.  The workflow schema sets
+``additionalProperties: false``, so any field not in the spec is
+rejected with "request/body must NOT have additional properties".
+
+Rather than maintaining a denylist of read-only fields, we allowlist
+exactly the fields each endpoint accepts — derived from the OpenAPI
+YAML definitions in the n8n source tree:
+
+  packages/cli/src/public-api/v1/handlers/workflows/spec/schemas/workflow.yml
+  packages/cli/src/public-api/v1/handlers/credentials/spec/schemas/update-credential-request.yml
 """
 
 from typing import Any
 
-# Fields common to every resource type.
-_COMMON_READONLY: frozenset[str] = frozenset(
+# PUT /workflows/{id}  — workflow.yml, additionalProperties: false
+# Read-only fields (id, active, createdAt, updatedAt, tags) are in the
+# schema but marked readOnly; we exclude them.  All other fields the
+# spec defines are writable.
+WORKFLOW_WRITABLE: frozenset[str] = frozenset(
     {
-        "id",
-        "createdAt",
-        "updatedAt",
-        "homeProject",
-        "sharedWithProjects",
-        "scopes",
-    }
-)
-
-# Extra read-only fields per resource kind.
-_WORKFLOW_EXTRA: frozenset[str] = frozenset(
-    {
-        "tags",
+        "name",
+        "nodes",
+        "connections",
+        "settings",
+        "staticData",
         "shared",
-        "pinData",
-        "isArchived",
-        "usedCredentials",
+        "activeVersion",
     }
 )
 
-_CREDENTIAL_EXTRA: frozenset[str] = frozenset(
+# PATCH /credentials/{id}  — update-credential-request.yml
+# No additionalProperties constraint, but we filter anyway to avoid
+# sending back metadata (timestamps, ownership, scopes, etc.) that
+# the endpoint ignores or that could break in future API versions.
+CREDENTIAL_WRITABLE: frozenset[str] = frozenset(
     {
-        "isManaged",
-        "ownedBy",
+        "name",
+        "type",
+        "data",
+        "isGlobal",
+        "isResolvable",
+        "isPartialData",
     }
 )
 
-WORKFLOW_READONLY: frozenset[str] = _COMMON_READONLY | _WORKFLOW_EXTRA
-CREDENTIAL_READONLY: frozenset[str] = _COMMON_READONLY | _CREDENTIAL_EXTRA
 
-
-def strip_readonly(data: dict[str, Any], keys: frozenset[str]) -> dict[str, Any]:
-    """Return a shallow copy of *data* with *keys* removed."""
-    return {k: v for k, v in data.items() if k not in keys}
+def keep_writable(data: dict[str, Any], keys: frozenset[str]) -> dict[str, Any]:
+    """Return a shallow copy of *data* keeping only *keys*."""
+    return {k: v for k, v in data.items() if k in keys}

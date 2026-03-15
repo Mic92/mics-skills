@@ -16,7 +16,7 @@ n8n-cli credential schema httpBasicAuth
 n8n-cli workflow list [--active|--inactive] [--tags t1,t2] [--name text] [--limit N]
 n8n-cli workflow get <id>              # full JSON for round-trip editing
 n8n-cli workflow create wf.json
-n8n-cli workflow update <id> wf.json   # auto-strips id/tags/shared/pinData
+n8n-cli workflow update <id> wf.json   # auto-filters to writable fields only
 n8n-cli workflow delete|activate|deactivate <id>
 
 # Executions — list|get|delete|retry|stop
