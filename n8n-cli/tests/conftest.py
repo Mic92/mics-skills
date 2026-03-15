@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from n8n_cli.main import main
-from n8n_cli.strip import CREDENTIAL_READONLY, WORKFLOW_READONLY
+from n8n_cli.strip import CREDENTIAL_WRITABLE, WORKFLOW_WRITABLE
 
 # ---------------------------------------------------------------------------
 # Realistic payloads modelled on actual n8n v1 API responses
@@ -208,9 +208,9 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
 
         if p == "/api/v1/workflows/wf-1":
             sent = json.loads(raw)
-            # Verify round-trip stripping: read-only keys must NOT be in the body
-            for forbidden in WORKFLOW_READONLY:
-                assert forbidden not in sent, f"workflow update should strip '{forbidden}'"
+            # Verify only writable fields are sent (mirroring additionalProperties: false)
+            for key in sent:
+                assert key in WORKFLOW_WRITABLE, f"workflow update sent non-writable field '{key}'"
             self._send(200, {**WORKFLOW_1, "name": sent.get("name", WORKFLOW_1["name"])})
         elif p == "/api/v1/tags/tag-1":
             sent = json.loads(raw)
@@ -224,9 +224,11 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
 
         if p == "/api/v1/credentials/42":
             sent = json.loads(raw)
-            # Verify round-trip stripping: read-only keys must NOT be in the body
-            for forbidden in CREDENTIAL_READONLY:
-                assert forbidden not in sent, f"credential update should strip '{forbidden}'"
+            # Verify only writable fields are sent
+            for key in sent:
+                assert key in CREDENTIAL_WRITABLE, (
+                    f"credential update sent non-writable field '{key}'"
+                )
             self._send(200, {**CREDENTIAL_1, "name": sent.get("name", CREDENTIAL_1["name"])})
             return
 

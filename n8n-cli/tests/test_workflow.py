@@ -87,6 +87,8 @@ class TestWorkflow:
         wf = {
             **WORKFLOW_1,
             "pinData": {"Start": [{}]},
+            "staticData": {"lastId": 5},
+            "meta": {"instanceId": "abc123"},
             "shared": [{"userId": "1"}],
             "isArchived": False,
             "homeProject": {"id": "proj-1"},
