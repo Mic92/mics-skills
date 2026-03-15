@@ -8,6 +8,7 @@ from typing import Any
 from n8n_cli.client import Client
 from n8n_cli.errors import APIError, CLIError
 from n8n_cli.output import atomic_write, enc
+from n8n_cli.strip import WORKFLOW_READONLY, strip_readonly
 
 
 class ApplyError(CLIError):
@@ -92,11 +93,8 @@ def _strip_for_create(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _strip_for_update(data: dict[str, Any]) -> dict[str, Any]:
-    """Strip fields not accepted by the update endpoint."""
-    body = dict(data)
-    for key in ("id", "createdAt", "updatedAt", "tags", "shared", "pinData"):
-        body.pop(key, None)
-    return body
+    """Strip read-only fields not accepted by the update endpoint."""
+    return strip_readonly(data, WORKFLOW_READONLY)
 
 
 def _update_local_file(path: str, created: dict[str, Any]) -> None:

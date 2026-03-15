@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from n8n_cli.main import main
+from n8n_cli.strip import CREDENTIAL_READONLY, WORKFLOW_READONLY
 
 # ---------------------------------------------------------------------------
 # Realistic payloads modelled on actual n8n v1 API responses
@@ -207,8 +208,8 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
 
         if p == "/api/v1/workflows/wf-1":
             sent = json.loads(raw)
-            # Verify round-trip stripping: these keys must NOT be in the body
-            for forbidden in ("id", "createdAt", "updatedAt", "tags", "shared", "pinData"):
+            # Verify round-trip stripping: read-only keys must NOT be in the body
+            for forbidden in WORKFLOW_READONLY:
                 assert forbidden not in sent, f"workflow update should strip '{forbidden}'"
             self._send(200, {**WORKFLOW_1, "name": sent.get("name", WORKFLOW_1["name"])})
         elif p == "/api/v1/tags/tag-1":
@@ -218,11 +219,18 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
             self._send(404, {"message": f"Not found: {p}"})
 
     def do_PATCH(self) -> None:  # noqa: N802
-        self._read_body()
+        raw = self._read_body()
         p = self.path.split("?")[0]
 
+        if p == "/api/v1/credentials/42":
+            sent = json.loads(raw)
+            # Verify round-trip stripping: read-only keys must NOT be in the body
+            for forbidden in CREDENTIAL_READONLY:
+                assert forbidden not in sent, f"credential update should strip '{forbidden}'"
+            self._send(200, {**CREDENTIAL_1, "name": sent.get("name", CREDENTIAL_1["name"])})
+            return
+
         routes: dict[str, Any] = {
-            "/api/v1/credentials/42": {**CREDENTIAL_1, "name": "Updated Cred"},
             "/api/v1/data-tables/dt-1": {**DATATABLE_1, "name": "Renamed"},
             "/api/v1/data-tables/dt-1/rows/update": {"updated": 1},
         }

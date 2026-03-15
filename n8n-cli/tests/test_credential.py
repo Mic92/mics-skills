@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import run_fail, run_ok
+from tests.conftest import CREDENTIAL_1, run_fail, run_ok
 
 
 class TestCredential:
@@ -42,14 +42,26 @@ class TestCredential:
         assert "Created" in out
         assert "New Cred" in out
 
-    def test_update(
+    def test_update_strips_readonly(
         self,
         server: tuple[str, int],
         capsys: pytest.CaptureFixture[str],
         tmp_path: Path,
     ) -> None:
+        """credential update strips read-only fields from round-trip JSON."""
+        cred = {
+            **CREDENTIAL_1,
+            "name": "Updated Cred",
+            "data": {"accessToken": "new-token"},
+            "isManaged": False,
+            "ownedBy": {"id": "user-1"},
+            "homeProject": {"id": "proj-1"},
+            "sharedWithProjects": [],
+            "scopes": ["credential:read"],
+        }
         f = tmp_path / "cred.json"
-        f.write_text(json.dumps({"name": "Updated Cred"}))
+        f.write_text(json.dumps(cred))
+        # The fake server asserts these read-only keys are NOT present
         out = run_ok(server, ["credential", "update", "42", str(f)], capsys)
         assert "Updated" in out
 
