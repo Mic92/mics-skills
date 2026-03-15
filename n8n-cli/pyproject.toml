@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "n8n-cli"
+version = "0.1.0"
+description = "Python CLI for n8n API: credentials, full workflow JSON, execution data, raw API calls"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+n8n-cli = "n8n_cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["n8n_cli"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
