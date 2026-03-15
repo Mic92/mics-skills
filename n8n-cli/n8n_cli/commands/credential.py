@@ -5,6 +5,7 @@ from typing import Any
 
 from n8n_cli.client import Client
 from n8n_cli.output import emit, emit_json, emit_kv, emit_table, enc, read_json_input, ts
+from n8n_cli.strip import CREDENTIAL_READONLY, strip_readonly
 
 
 def _text_get(c: dict[str, Any]) -> None:
@@ -63,8 +64,13 @@ def cmd_credential_create(client: Client, ns: Namespace) -> None:
 
 
 def cmd_credential_update(client: Client, ns: Namespace) -> None:
-    """Update a credential."""
+    """Update a credential.
+
+    Strips read-only fields returned by GET that the PATCH endpoint rejects.
+    """
     body = read_json_input(ns.file)
+    if isinstance(body, dict):
+        body = strip_readonly(body, CREDENTIAL_READONLY)
     result = client.patch(f"/credentials/{enc(ns.id)}", body)
     emit(result, use_json=ns.use_json, text_fn=lambda c: _text_mutate("Updated", c))
 

@@ -83,11 +83,16 @@ class TestWorkflow:
         capsys: pytest.CaptureFixture[str],
         tmp_path: Path,
     ) -> None:
-        """workflow update strips id/createdAt/updatedAt/tags/shared/pinData."""
+        """workflow update strips all read-only fields from round-trip JSON."""
         wf = {
             **WORKFLOW_1,
             "pinData": {"Start": [{}]},
             "shared": [{"userId": "1"}],
+            "isArchived": False,
+            "homeProject": {"id": "proj-1"},
+            "sharedWithProjects": [],
+            "scopes": ["workflow:read"],
+            "usedCredentials": [{"id": "42"}],
         }
         f = tmp_path / "wf.json"
         f.write_text(json.dumps(wf))
