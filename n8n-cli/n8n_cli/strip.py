@@ -16,9 +16,10 @@ YAML definitions in the n8n source tree:
 from typing import Any
 
 # PUT /workflows/{id}  — workflow.yml, additionalProperties: false
-# Read-only fields (id, active, createdAt, updatedAt, tags) are in the
-# schema but marked readOnly; we exclude them.  All other fields the
-# spec defines are writable.
+# We exclude fields marked readOnly in the spec:
+#   id, active, createdAt, updatedAt, tags  — top-level readOnly
+#   shared      — contains nested readOnly fields (project.id, project.type)
+#   activeVersion — entire object is readOnly
 WORKFLOW_WRITABLE: frozenset[str] = frozenset(
     {
         "name",
@@ -26,8 +27,6 @@ WORKFLOW_WRITABLE: frozenset[str] = frozenset(
         "connections",
         "settings",
         "staticData",
-        "shared",
-        "activeVersion",
     }
 )
 
