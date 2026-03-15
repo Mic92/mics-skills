@@ -48,6 +48,7 @@
             db-cli = pkgs.callPackage ./db-cli { };
             gmaps-cli = pkgs.python3.pkgs.callPackage ./gmaps-cli { };
             kagi-search = pkgs.python3.pkgs.callPackage ./kagi-search { };
+            n8n-cli = pkgs.python3.pkgs.callPackage ./n8n-cli { };
             pexpect-cli = pkgs.callPackage ./pexpect-cli { };
             screenshot-cli = pkgs.python3.pkgs.callPackage ./screenshot-cli {
               spectacle = if pkgs.stdenv.hostPlatform.isLinux then pkgs.kdePackages.spectacle else null;
@@ -111,6 +112,11 @@
                 extraPythonPackages = with pkgs.python3.pkgs; [
                   beautifulsoup4
                   types-beautifulsoup4
+                ];
+              };
+              "n8n-cli" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  pytest
                 ];
               };
               "weather-cli" = { };
