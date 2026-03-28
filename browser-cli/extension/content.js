@@ -638,14 +638,31 @@ if (!window.__browserCliInjected) {
   }
 
   /**
+   * Quote a string literal for XPath. XPath 1.0 has no escape mechanism,
+   * so strings containing both quote types must be split into a concat()
+   * call that alternates quoting styles.
+   * @param {string} s
+   * @returns {string}
+   */
+  function xpathQuote(s) {
+    if (!s.includes('"')) {
+      return `"${s}"`;
+    }
+    if (!s.includes("'")) {
+      return `'${s}'`;
+    }
+    // Contains both: build concat("a", '"', "b", ...)
+    const parts = s.split('"').map((p) => `"${p}"`);
+    return `concat(${parts.join(`, '"', `)})`;
+  }
+
+  /**
    * Find element by text content
    * @param {string} text - Text to search for
    * @returns {Element} Found element
    */
   function findByText(text) {
-    const xpath = text.includes('"')
-      ? `//*[contains(text(), '${text}')]`
-      : `//*[contains(text(), "${text}")]`;
+    const xpath = `//*[contains(text(), ${xpathQuote(text)})]`;
 
     const result = document.evaluate(
       xpath,
@@ -660,13 +677,24 @@ if (!window.__browserCliInjected) {
   }
 
   /**
+   * Quote a string for use inside a CSS attribute selector.
+   * CSS.escape() is for identifiers and over-escapes (e.g. spaces)
+   * in ways that break quoted-value matching.
+   * @param {string} s
+   * @returns {string}
+   */
+  function cssAttrQuote(s) {
+    return `"${s.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+  }
+
+  /**
    * Find element by aria-label
    * @param {string} label - ARIA label to search for
    * @returns {Element} Found element
    */
   function findByAriaLabel(label) {
     const element = document.querySelector(
-      `[aria-label="${CSS.escape(label)}"]`,
+      `[aria-label=${cssAttrQuote(label)}]`,
     );
     if (element) {
       return element;
@@ -681,7 +709,7 @@ if (!window.__browserCliInjected) {
    */
   function findByPlaceholder(placeholder) {
     const element = document.querySelector(
-      `[placeholder="${CSS.escape(placeholder)}"]`,
+      `[placeholder=${cssAttrQuote(placeholder)}]`,
     );
     if (element) {
       return element;
