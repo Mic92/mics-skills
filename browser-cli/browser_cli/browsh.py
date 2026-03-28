@@ -10,7 +10,6 @@ import pty
 import shlex
 import shutil
 import signal
-import threading
 import time
 from pathlib import Path
 
@@ -65,37 +64,46 @@ def _build_browsh_cmd(firefox_path: str | None) -> list[str]:
     return cmd
 
 
-def _drain_pty(fd: int) -> None:
-    """Read and discard PTY output to prevent buffer blocking."""
-    while True:
-        try:
-            if not os.read(fd, 4096):
-                break
-        except OSError:
-            break
-    os.close(fd)
-
-
 def _spawn_browsh(cmd: list[str]) -> int:
     """Fork browsh with a PTY and return the child PID.
 
-    Browsh requires a TTY to run. We use pty.fork() to provide one,
-    and drain its output in a daemon thread so it doesn't block.
-    The child ignores SIGHUP so browsh survives when the parent
-    exits and the PTY master fd closes.
-    """
-    child_pid, pty_fd = pty.fork()
+    Browsh requires a TTY on stdin to start. We allocate a PTY pair
+    manually and double-fork so the intermediate parent can exit
+    immediately, detaching browsh from the CLI process.
 
-    if child_pid == 0:
-        # Ignore SIGHUP so we survive parent exit / PTY close
+    Previously we used pty.fork() with a daemon drain thread, but once
+    the CLI process exited the master fd closed and subsequent writes
+    from browsh hit EIO, killing the TUI renderer. Keeping the master
+    fd alive inside the detached child avoids that, and redirecting
+    stdout/stderr to /dev/null means nothing ever reads the PTY so it
+    cannot fill up.
+    """
+    master_fd, slave_fd = pty.openpty()
+
+    pid = os.fork()
+    if pid == 0:
+        # Child: new session so we get our own process group for
+        # killpg() in stop(), and so the PTY becomes our ctty.
+        os.setsid()
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+        # stdin from PTY slave (browsh checks isatty on stdin),
+        # stdout/stderr to /dev/null so the PTY buffer never fills.
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(slave_fd, 0)
+        os.dup2(devnull, 1)
+        os.dup2(devnull, 2)
+        os.close(slave_fd)
+        os.close(devnull)
+        # Keep master_fd open so the slave stays valid after the
+        # spawning CLI process exits.
+
         os.execvp(cmd[0], cmd)  # noqa: S606
 
-    # Parent: drain PTY output in background to prevent buffer blocking
-    drain_thread = threading.Thread(target=_drain_pty, args=(pty_fd,), daemon=True)
-    drain_thread.start()
-
-    return child_pid
+    # Parent: close both ends, we don't need them.
+    os.close(master_fd)
+    os.close(slave_fd)
+    return pid
 
 
 def _wait_for_socket(child_pid: int, timeout: float) -> None:
