@@ -22,20 +22,22 @@ from browser_cli.errors import BrowserCLIError
 
 def install_native_host() -> None:
     """Install native messaging host for Firefox."""
-    server_path = shutil.which("browser-cli-server")
-    if not server_path:
+    if not shutil.which("browser-cli-server"):
         print("Error: browser-cli-server not found in PATH", file=sys.stderr)
         sys.exit(1)
 
     home = Path.home()
 
-    # Create a wrapper script that doesn't hardcode nix store paths
+    # Firefox requires an absolute path in the native-messaging manifest,
+    # but the resolved path from shutil.which() is a nix store path that
+    # goes stale after nix-collect-garbage. Indirect through a wrapper
+    # that resolves the binary via PATH at runtime.
     wrapper_dir = home / ".local" / "bin"
     wrapper_dir.mkdir(parents=True, exist_ok=True)
     wrapper_path = wrapper_dir / "browser-cli-server-wrapper"
 
-    wrapper_content = f"""#!/usr/bin/env bash
-exec "{server_path}" "$@"
+    wrapper_content = """#!/usr/bin/env bash
+exec browser-cli-server "$@"
 """
     wrapper_path.write_text(wrapper_content)
     wrapper_path.chmod(0o755)
@@ -47,6 +49,7 @@ exec "{server_path}" "$@"
         host_dirs.append(app_support / "LibreWolf" / "NativeMessagingHosts")
     else:
         host_dirs.append(home / ".mozilla" / "native-messaging-hosts")
+        host_dirs.append(home / ".librewolf" / "native-messaging-hosts")
 
     for host_dir in host_dirs:
         host_dir.mkdir(parents=True, exist_ok=True)
