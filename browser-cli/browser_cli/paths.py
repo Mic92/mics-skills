@@ -1,6 +1,7 @@
 """Path utilities for browser-cli."""
 
 import os
+import sys
 from pathlib import Path
 
 
@@ -22,6 +23,16 @@ def get_socket_path() -> Path:
     runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
     if runtime_dir:
         return Path(runtime_dir) / "browser-cli.sock"
+
+    # macOS: per-user $TMPDIR under /var/folders/ is mode 0700 and
+    # cleared on reboot, making it a good runtime-dir substitute.
+    if sys.platform == "darwin":
+        tmpdir = os.environ.get("TMPDIR")
+        if tmpdir:
+            sock_dir = Path(tmpdir) / "browser-cli"
+            sock_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+            sock_dir.chmod(0o700)
+            return sock_dir / "browser-cli.sock"
 
     # Fallback: use XDG_CACHE_HOME/browser-cli/ with restrictive permissions
     cache_home = os.environ.get("XDG_CACHE_HOME")
