@@ -293,7 +293,10 @@ class NativeMessagingBridge:
 
     async def native_messaging_loop(self) -> None:
         """Handle native messaging in a loop."""
-        await self.setup_native_messaging()
+        # setup_native_messaging() is called by start() before we get
+        # here so that the ready message can be sent first.
+        if not self.stdin_reader:
+            await self.setup_native_messaging()
 
         while True:
             message = await self.read_native_message()
@@ -315,6 +318,11 @@ class NativeMessagingBridge:
 
         # Set socket permissions
         socket_path.chmod(0o600)
+
+        # Set up native messaging BEFORE sending the ready message,
+        # otherwise stdout_writer is None and the message is silently
+        # dropped (the extension never learns the socket path).
+        await self.setup_native_messaging()
 
         # Send socket path to extension via native messaging
         await self.write_native_message(
