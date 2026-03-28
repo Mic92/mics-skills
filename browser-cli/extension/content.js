@@ -2233,78 +2233,88 @@ if (!window.__browserCliInjected) {
     }
   }
 
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
+  /** API exposed to exec'd code. Keep names and values in lockstep. */
+  const execApi = {
+    click,
+    type,
+    hover,
+    drag,
+    select,
+    key,
+    snap,
+    logs,
+    find,
+    wait,
+    read,
+    shot,
+    download,
+  };
+  const execApiNames = Object.keys(execApi);
+  const execApiValues = Object.values(execApi);
+
+  /**
+   * Compile user code into an async function, auto-returning where possible.
+   *
+   * Strategy (same as DevTools / Node REPL — no string parsing):
+   *   1. Try `return (<code>)` — succeeds iff the whole input is one
+   *      expression. Covers `snap()`, `await click(1)`, etc.
+   *   2. Try `<prefix>; return (<lastLine>)` — covers the common
+   *      "do stuff, then snap()" multi-line pattern.
+   *   3. Fall back to the code verbatim — user writes explicit `return`.
+   *
+   * Each attempt is validated by the AsyncFunction constructor itself,
+   * so we never guess at JS syntax with regexes.
+   *
+   * @param {string} code
+   * @returns {Function}
+   */
+  function compileExec(code) {
+    const trimmed = code.trim();
+
+    /** @param {string} body */
+    const tryCompile = (body) => {
+      try {
+        return new AsyncFunction(...execApiNames, body);
+      } catch {
+        return undefined;
+      }
+    };
+
+    // 1. Whole thing is a single expression?
+    //    Strip a single trailing ';' so `snap();` still qualifies.
+    const asExpr = trimmed.replace(/;\s*$/, "");
+    let fn = tryCompile(`return (\n${asExpr}\n)`);
+    if (fn) {
+      return fn;
+    }
+
+    // 2. Statements + trailing expression on the last line?
+    const lastNl = trimmed.lastIndexOf("\n");
+    if (lastNl !== -1) {
+      const prefix = trimmed.slice(0, lastNl);
+      const last = trimmed.slice(lastNl + 1).replace(/;\s*$/, "");
+      if (last) {
+        fn = tryCompile(`${prefix}\n;return (\n${last}\n)`);
+        if (fn) {
+          return fn;
+        }
+      }
+    }
+
+    // 3. Run as-is; any SyntaxError here is the user's and should surface.
+    return new AsyncFunction(...execApiNames, trimmed);
+  }
+
   /**
    * Handle exec command - execute JavaScript with API available
    * @param {string} code - JavaScript code to execute
    * @returns {Promise<{result: any}>}
    */
   async function handleExec(code) {
-    // Create async function to allow await in code
-    const AsyncFunction = Object.getPrototypeOf(
-      async function () {},
-    ).constructor;
-
-    // Wrap code to auto-return the last expression if no explicit return
-    let wrappedCode = code.trim();
-    if (!wrappedCode.includes("return ") && !wrappedCode.includes("return;")) {
-      // Find the last statement and return it
-      const lines = wrappedCode.split("\n");
-      const lastLine = lines.pop()?.trim() || "";
-      if (lastLine && !lastLine.endsWith(";")) {
-        // Last line is an expression - return it
-        wrappedCode = [...lines, `return (${lastLine})`].join("\n");
-      } else if (lastLine) {
-        // Last line ends with semicolon - try to return it anyway
-        const expr = lastLine.slice(0, -1).trim();
-        if (
-          expr &&
-          !expr.startsWith("const ") &&
-          !expr.startsWith("let ") &&
-          !expr.startsWith("var ")
-        ) {
-          wrappedCode = [...lines, `return (${expr})`].join("\n");
-        }
-      }
-    }
-
-    // Make API functions available in the execution context
-    const fn = new AsyncFunction(
-      // Content script functions
-      "click",
-      "type",
-      "hover",
-      "drag",
-      "select",
-      "key",
-      "snap",
-      "logs",
-      "find",
-      "wait",
-      "read",
-      // Background script functions
-      "shot",
-      "download",
-      wrappedCode,
-    );
-
-    const result = await fn(
-      // Content script functions
-      click,
-      type,
-      hover,
-      drag,
-      select,
-      key,
-      snap,
-      logs,
-      find,
-      wait,
-      read,
-      // Background script functions
-      shot,
-      download,
-    );
-
+    const fn = compileExec(code);
+    const result = await fn(...execApiValues);
     return { result: serializeResult(result) };
   }
 
