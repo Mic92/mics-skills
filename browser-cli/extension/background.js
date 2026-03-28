@@ -39,16 +39,21 @@ const managedTabs = new Map();
 let activeTabId;
 
 /**
- * Generate a short random ID for tabs
+ * Generate a short random ID for tabs.
+ * Retries on the (astronomically unlikely) chance of collision so we
+ * never silently clobber an existing managed tab.
  * @returns {string}
  */
 function generateTabId() {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+  let result;
+  do {
+    result = "";
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+  } while (managedTabs.has(result));
   return result;
 }
 
@@ -156,11 +161,14 @@ async function getTargetTab(targetTabId) {
  * @param {string} [targetTabId]
  * @returns {Promise<object>}
  */
+/** @type {number} Monotonic counter to disambiguate messages sent in the same millisecond. */
+let contentMessageCounter = 0;
+
 async function sendToContentScript(command, params = {}, targetTabId) {
   const tabId = await getTargetTab(targetTabId);
 
   return new Promise((resolve, reject) => {
-    const messageId = Date.now().toString();
+    const messageId = `${Date.now()}_${++contentMessageCounter}`;
     messageHandlers[messageId] = { resolve, reject };
 
     browser.tabs.sendMessage(tabId, { command, params, messageId });
