@@ -2067,18 +2067,28 @@ if (!window.__browserCliInjected) {
   }
 
   /**
-   * Remove hidden elements from cloned document
+   * Remove hidden elements from cloned document.
+   *
+   * Resolve all paths against the pristine clone first, then remove.
+   * Removing during iteration shifts child indices and makes later
+   * paths (computed against the original doc) point at the wrong node.
+   *
    * @param {Document} clonedDoc - The cloned document to clean
    * @param {Set<Element>} hiddenElements - Elements from original doc that were hidden
    * @param {Document} originalDoc - The original document for path matching
    */
   function removeHiddenFromClone(clonedDoc, hiddenElements, originalDoc) {
+    /** @type {Element[]} */
+    const toRemove = [];
     for (const el of hiddenElements) {
       const path = getElementPath(el, originalDoc);
       const clonedEl = getElementByPath(path, clonedDoc);
       if (clonedEl) {
-        clonedEl.remove();
+        toRemove.push(clonedEl);
       }
+    }
+    for (const el of toRemove) {
+      el.remove();
     }
   }
 
