@@ -154,6 +154,9 @@ async function getTargetTab(targetTabId) {
   );
 }
 
+/** @type {number} Monotonic counter to disambiguate messages sent in the same millisecond. */
+let contentMessageCounter = 0;
+
 /**
  * Send command to content script
  * @param {string} command
@@ -161,9 +164,6 @@ async function getTargetTab(targetTabId) {
  * @param {string} [targetTabId]
  * @returns {Promise<object>}
  */
-/** @type {number} Monotonic counter to disambiguate messages sent in the same millisecond. */
-let contentMessageCounter = 0;
-
 async function sendToContentScript(command, params = {}, targetTabId) {
   const tabId = await getTargetTab(targetTabId);
 
