@@ -53,6 +53,9 @@ export default [
         SubmitEvent: "readonly",
         MutationObserver: "readonly",
         Readability: "readonly",
+        // Firefox content-script APIs for page-world interop
+        exportFunction: "readonly",
+        cloneInto: "readonly",
       },
     },
     plugins: {

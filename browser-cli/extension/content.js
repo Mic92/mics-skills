@@ -26,8 +26,17 @@ if (!window.__browserCliInjected) {
    * @property {Element} domElement - Reference to DOM element
    */
 
-  /** @type {ConsoleLog[]} Store console logs */
-  const consoleLogs = [];
+  /**
+   * Page console logs. The buffer itself lives in console-capture.js,
+   * a document_start content script that patches the page-world console
+   * via wrappedJSObject (so CSP never blocks it and early logs are not
+   * missed). Both scripts share the same isolated world, hence the
+   * window-scoped handoff.
+   *
+   * @type {ConsoleLog[]}
+   */
+  // @ts-ignore - custom property populated by console-capture.js
+  const consoleLogs = window.__browserCliConsoleCapture || [];
   /** @type {number} */
   const MAX_CONSOLE_LOGS = 1000;
 
@@ -501,94 +510,38 @@ if (!window.__browserCliInjected) {
   }
 
   // ============================================================================
-  // Console Override
+  // Console capture (content-script world)
   // ============================================================================
+  //
+  // Page-world capture is handled by console-capture.js. Here we only
+  // patch the isolated-world console so that console.log() inside user
+  // exec() code also lands in the same buffer.
 
-  /**
-   * Inject console override into page context to capture all logs
-   */
-  function injectConsoleOverride() {
-    const script = document.createElement("script");
-    script.textContent = `
-    (function() {
-      const consoleMethods = ['log', 'error', 'warn', 'info', 'debug'];
-      consoleMethods.forEach(method => {
-        const original = console[method];
-        console[method] = function(...args) {
-          window.postMessage({
-            type: 'browser-cli-console',
-            method: method,
-            args: args.map(arg => {
-              try {
-                return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
-              } catch {
-                return '[Circular reference]';
-              }
-            }),
-            timestamp: new Date().toISOString()
-          }, '*');
-          original.apply(console, args);
-        };
-      });
-    })();
-  `;
-    (document.head || document.documentElement).append(script);
-    script.remove();
-  }
-
-  window.addEventListener("message", (event) => {
-    if (event.source !== window) {
-      return;
-    }
-
-    if (event.data && event.data.type === "browser-cli-console") {
-      consoleLogs.push({
-        type: event.data.method,
-        message: event.data.args.join(" "),
-        timestamp: event.data.timestamp,
-      });
-
-      if (consoleLogs.length > MAX_CONSOLE_LOGS) {
-        consoleLogs.shift();
-      }
-    }
-  });
-
-  injectConsoleOverride();
-
-  /** @type {Array<keyof Console>} */
-  const consoleMethods = /** @type {any} */ ([
+  for (const method of /** @type {const} */ ([
     "log",
     "error",
     "warn",
     "info",
     "debug",
-  ]);
-  for (const method of consoleMethods) {
-    // @ts-ignore
+  ])) {
     const original = console[method];
-    // @ts-ignore
-    console[method] = function (.../** @type {any[]} */ args) {
+    console[method] = function (.../** @type {unknown[]} */ args) {
       consoleLogs.push({
         type: method,
         message: args
-          .map((arg) => {
+          .map((a) => {
             try {
-              return typeof arg === "object"
-                ? JSON.stringify(arg)
-                : String(arg);
+              return typeof a === "object" ? JSON.stringify(a) : String(a);
             } catch {
-              return String(arg);
+              return String(a);
             }
           })
           .join(" "),
         timestamp: new Date().toISOString(),
       });
-
       if (consoleLogs.length > MAX_CONSOLE_LOGS) {
         consoleLogs.shift();
       }
-
       original.apply(console, args);
     };
   }
