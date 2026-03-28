@@ -129,18 +129,24 @@ async function getTargetTab(targetTabId) {
   if (targetTabId) {
     const managedTab = managedTabs.get(targetTabId);
     if (!managedTab) {
-      throw new Error(`Tab ${targetTabId} not found`);
+      throw new Error(
+        `Tab ${targetTabId} not found. Use 'browser-cli --list' to see managed tabs.`,
+      );
     }
     return managedTab.tabId;
-  } else if (activeTabId) {
-    const managedTab = managedTabs.get(activeTabId);
-    if (!managedTab) {
-      throw new Error(`Active tab ${activeTabId} no longer exists`);
-    }
-    return managedTab.tabId;
-  } else {
-    throw new Error("No active tab. Create a tab first with newTab()");
   }
+  // Fall back to active tab, but validate it still exists — activeTabId
+  // can go stale after browser restart or when onRemoved didn't fire.
+  if (activeTabId) {
+    const managedTab = managedTabs.get(activeTabId);
+    if (managedTab) {
+      return managedTab.tabId;
+    }
+    activeTabId = undefined;
+  }
+  throw new Error(
+    "No managed tab. Open one with 'browser-cli --go URL' or click the extension icon.",
+  );
 }
 
 /**
@@ -179,14 +185,25 @@ async function sendToContentScript(command, params = {}, targetTabId) {
  * @returns {Promise<{url: string}>}
  */
 async function navigate(url, tabId) {
-  const targetId = tabId || activeTabId;
+  let targetId = tabId;
   if (!targetId) {
-    throw new Error("No tab to navigate");
+    // Validate activeTabId before using it — it can go stale.
+    if (activeTabId && managedTabs.has(activeTabId)) {
+      targetId = activeTabId;
+    } else {
+      activeTabId = undefined;
+      // No usable tab: create one. This makes `browser-cli --go URL`
+      // work without requiring the user to first open a tab manually.
+      const created = await createNewTab(url);
+      return { url: created.url, tabId: created.tabId };
+    }
   }
 
   const managedTab = managedTabs.get(targetId);
   if (!managedTab) {
-    throw new Error(`Tab ${targetId} not found`);
+    throw new Error(
+      `Tab ${targetId} not found. Use 'browser-cli --list' to see managed tabs.`,
+    );
   }
 
   const browserTabId = managedTab.tabId;
@@ -487,10 +504,6 @@ async function handleCommand(message) {
         result = await listTabs();
         break;
       }
-      case "new-tab": {
-        result = await createNewTab(params.url);
-        break;
-      }
       case "go": {
         if (!params.url) {
           throw new Error("go requires a URL");
@@ -511,19 +524,6 @@ async function handleCommand(message) {
       // Execute JavaScript in content script
       case "exec": {
         result = await sendToContentScript("exec", params, tabId);
-        break;
-      }
-
-      // Execute JavaScript on a specific tab (used for remote tab proxying)
-      case "exec-on-tab": {
-        if (!params.tabId) {
-          throw new Error("exec-on-tab requires tabId parameter");
-        }
-        result = await sendToContentScript(
-          "exec",
-          { code: params.code },
-          params.tabId,
-        );
         break;
       }
 
@@ -729,35 +729,8 @@ browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
             }
             break;
           }
-          case "new-tab": {
-            result = await createNewTab(params.url);
-            break;
-          }
-          case "go": {
-            result = await navigate(params.url, senderTabShortId);
-            break;
-          }
-          case "close-tab": {
-            result = await closeTab(params.tabId || senderTabShortId);
-            break;
-          }
-          case "list-tabs": {
-            result = await listTabs();
-            break;
-          }
           case "download": {
             result = await downloadFile(params.url, params.filename);
-            break;
-          }
-          case "exec-on-tab": {
-            if (!params.tabId) {
-              throw new Error("exec-on-tab requires tabId parameter");
-            }
-            result = await sendToContentScript(
-              "exec",
-              { code: params.code },
-              params.tabId,
-            );
             break;
           }
           default: {

@@ -22,7 +22,9 @@ class NativeMessagingBridge:
         self.message_counter = 0
         self.stdin_reader: asyncio.StreamReader | None = None
         self.stdout_writer: asyncio.StreamWriter | None = None
-        self.latest_tab_id: str | None = None  # Track the most recently created tab
+        # No tab-ID tracking here. The bridge is a dumb pipe; the
+        # extension is the single source of truth for tab state. Caching
+        # a tab ID here caused stale-reference bugs after browser restart.
 
     async def setup_native_messaging(self) -> None:
         """Set up stdin/stdout for native messaging."""
@@ -141,10 +143,6 @@ class NativeMessagingBridge:
             # This is a response to a CLI request
             future = self.pending_responses.pop(msg_id)
 
-            # Track the latest tab ID if this was a new-tab command
-            if message.get("success") and "tabId" in message.get("result", {}):
-                self.latest_tab_id = message["result"]["tabId"]
-
             future.set_result(message)
         else:
             # This is a command from the extension - shouldn't happen in our architecture
@@ -231,58 +229,6 @@ class NativeMessagingBridge:
             writer.close()
             await writer.wait_closed()
 
-    async def _ensure_tab_exists(
-        self,
-        data: dict[str, Any],
-        msg_id: str,
-        writer: asyncio.StreamWriter,
-    ) -> bool:
-        """Ensure a tab exists for commands that need one.
-
-        Returns True if tab exists or was created, False if failed.
-        """
-        command = data.get("command", "")
-        if command in ["list-tabs", "new-tab"] or "tabId" in data:
-            return True
-
-        if self.latest_tab_id:
-            data["tabId"] = self.latest_tab_id
-            return True
-
-        # No tabs exist, create a minimal one for content script injection.
-        # Uses a data: URI since about:blank blocks content scripts.
-        logger.info("No managed tabs exist, creating a new tab")
-        new_tab_id = f"auto_{msg_id}"
-        new_tab_msg = {
-            "command": "new-tab",
-            "params": {"url": "https://example.com"},
-            "id": new_tab_id,
-        }
-        new_tab_future: asyncio.Future[Any] = asyncio.Future()
-        self.pending_responses[new_tab_id] = new_tab_future
-        await self.write_native_message(new_tab_msg)
-
-        try:
-            new_tab_response = await asyncio.wait_for(new_tab_future, timeout=5.0)
-            result = new_tab_response.get("result", {})
-            if new_tab_response.get("success") and "tabId" in result:
-                self.latest_tab_id = new_tab_response["result"]["tabId"]
-                data["tabId"] = self.latest_tab_id
-                logger.info("Created new tab: %s", self.latest_tab_id)
-                return True
-            logger.error("Failed to create new tab - no tabId in response")
-            self.latest_tab_id = None
-        except TimeoutError:
-            logger.exception("Timeout creating new tab")
-            await self._send_error_response(
-                writer,
-                msg_id,
-                "No managed tabs exist. Use 'browser-cli new-tab'",
-            )
-            return False
-        else:
-            return False
-
     async def _send_error_response(
         self,
         writer: asyncio.StreamWriter,
@@ -314,10 +260,6 @@ class NativeMessagingBridge:
                 msg_id = f"cli_{self.message_counter}"
                 self.message_counter += 1
                 data["id"] = msg_id
-
-            # Ensure tab exists for commands that need it
-            if not await self._ensure_tab_exists(data, msg_id, writer):
-                return
 
             # Create future for response
             future: asyncio.Future[Any] = asyncio.Future()

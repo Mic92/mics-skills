@@ -241,10 +241,19 @@ async def navigate_tab(
     socket: str | None,
     firefox_path: str | None = None,
 ) -> None:
-    """Navigate a tab to a URL and wait for load."""
+    """Navigate a tab to a URL and wait for load.
+
+    If no tab_id is given and no managed tab exists, the extension
+    creates a new tab. We print its ID so the user can target it in
+    subsequent commands.
+    """
     client = BrowserClient(socket, firefox_path=firefox_path)
-    await client.send_command("go", {"url": url}, tab_id)
-    print(f"Navigated to {url}")
+    result = await client.send_command("go", {"url": url}, tab_id)
+    new_id = result.get("tabId")
+    if new_id and new_id != tab_id:
+        print(f"Opened {url} in new tab {new_id}")
+    else:
+        print(f"Navigated to {url}")
 
 
 async def list_tabs(socket: str | None, firefox_path: str | None = None) -> None:
@@ -273,21 +282,22 @@ Examples:
   # List managed tabs
   browser-cli --list
 
-  # Open page and get snapshot
-  browser-cli <<'EOF'
-  await tab("https://example.com")
-  snap()
-  EOF
+  # Open a page (creates tab, prints its ID)
+  browser-cli --go "https://example.com"
+  # -> Opened https://example.com in new tab abc123
+
+  # Get snapshot of that tab
+  browser-cli abc123 <<< 'snap()'
 
   # Form filling with refs
-  browser-cli <<'EOF'
+  browser-cli abc123 <<'EOF'
   await type(1, "user@test.com")
   await type(2, "secret123")
   await click(3)
   EOF
 
   # Wait for dynamic content
-  browser-cli <<'EOF'
+  browser-cli abc123 <<'EOF'
   await click(5)
   await wait("text", "Success")
   snap()
@@ -324,10 +334,9 @@ Available JS API:
     download(url)        - Download file to ~/Downloads
     download(url, name)  - Download with custom filename
 
-  Tabs:
-    tab()                - New tab
-    tab(url)             - New tab with URL
-    tabs()               - List tabs
+Tab management is done via CLI flags, not JS:
+  browser-cli --go URL   - Open/navigate tab, prints tab ID
+  browser-cli --list     - List managed tabs
         """,
     )
 

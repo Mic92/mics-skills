@@ -163,17 +163,6 @@ nix build .#browser-cli
 Refs are reset on each snapshot. If you get "Element [N] not found", call
 `snap()` to get fresh refs.
 
-## Known Issues
-
-### Extra `example.com` tab when no managed tabs exist
-
-When no managed tabs exist and the first command uses `tab("url")`, the bridge
-auto-creates a throwaway `example.com` tab to bootstrap content script
-execution. Firefox blocks content script injection on `about:blank` and `data:`
-URIs, so a real HTTP page is required. The `tab()` call then creates the
-intended tab and subsequent API calls (`snap()`, `click()`, etc.) are correctly
-proxied to it. The leftover `example.com` tab can be ignored or closed manually.
-
 ## License
 
 MIT

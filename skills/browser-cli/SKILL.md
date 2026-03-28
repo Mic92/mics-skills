@@ -9,13 +9,11 @@ description: Control Firefox browser from the command line. Use for web automati
 # List managed tabs
 browser-cli --list
 
-# Open a page and get snapshot
-browser-cli <<'EOF'
-await tab("https://example.com")
-snap()
-EOF
+# Open a page (creates a managed tab, prints its ID)
+browser-cli --go "https://example.com"
+# -> Opened https://example.com in new tab abc123
 
-# Execute in a specific tab
+# Execute in that tab
 browser-cli abc123 <<'EOF'
 snap()
 EOF
@@ -119,13 +117,8 @@ browser-cli TABID --go "https://example.com"
 # Then run commands on the loaded page
 browser-cli TABID <<< "read()"
 
-# Open new tab (note: switches execution context)
-browser-cli <<'EOF'
-await tab("https://example.com")
-EOF
-
 # List all tabs
-browser-cli <<< "await tabs()"
+browser-cli --list
 ```
 
 ## Screenshots
@@ -159,26 +152,26 @@ URL: https://example.com
 
 ```bash
 # Search on Google
-browser-cli <<'EOF'
-await tab("https://google.com")
-snap()
-EOF
+browser-cli --go "https://google.com"
+# -> Opened https://google.com in new tab gX7k2a
+
+browser-cli gX7k2a <<< 'snap()'
 # Output shows [12] combobox "Suche"
 
-browser-cli <<'EOF'
+browser-cli gX7k2a <<'EOF'
 await type(12, "hello world")
 diff()
 EOF
 # Shows: Added (autocomplete options), Changed (input value)
 
 # Form filling
-browser-cli <<'EOF'
-await tab("https://example.com/login")
-snap()
-EOF
+browser-cli --go "https://example.com/login"
+# -> Opened ... in new tab h9Jk3b
+
+browser-cli h9Jk3b <<< 'snap()'
 # Output: [1] input "Email", [2] input "Password", [3] button "Sign In"
 
-browser-cli <<'EOF'
+browser-cli h9Jk3b <<'EOF'
 await type(1, "user@test.com")
 await type(2, "secret123")
 await click(3)
@@ -186,7 +179,7 @@ diff()
 EOF
 
 # Wait for dynamic content
-browser-cli <<'EOF'
+browser-cli h9Jk3b <<'EOF'
 await click(5)
 await wait("text", "Success")
 snap()
