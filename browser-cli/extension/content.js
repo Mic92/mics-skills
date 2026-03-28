@@ -703,7 +703,9 @@ if (!window.__browserCliInjected) {
    * @returns {string}
    */
   function cssAttrQuote(s) {
-    return `"${s.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+    // eslint-disable-next-line unicorn/prefer-string-raw -- nested in template literal
+    const escaped = s.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+    return `"${escaped}"`;
   }
 
   /**
@@ -2273,12 +2275,15 @@ if (!window.__browserCliInjected) {
   function compileExec(code) {
     const trimmed = code.trim();
 
-    /** @param {string} body */
+    /**
+     * @param {string} body
+     * @returns {Function|undefined}
+     */
     const tryCompile = (body) => {
       try {
         return new AsyncFunction(...execApiNames, body);
       } catch {
-        return undefined;
+        return undefined; // eslint-disable-line unicorn/no-useless-undefined
       }
     };
 
