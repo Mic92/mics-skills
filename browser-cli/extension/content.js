@@ -246,19 +246,31 @@ if (!window.__browserCliInjected) {
       /** @type {string|undefined} */
       this.newTitle = this.titleChanged ? after.title : undefined;
 
-      // Build maps by element signature (role + name) for comparison
-      /** @type {Map<string, SnapshotElement>} */
+      // Group by element signature (role + name). Using arrays rather
+      // than a single value per key preserves duplicates (e.g. two
+      // "Submit" buttons) so removing one actually shows up in the diff.
+      /** @type {Map<string, SnapshotElement[]>} */
       const beforeMap = new Map();
       for (const el of before.elements) {
         const key = `${el.role}|${el.name}`;
-        beforeMap.set(key, el);
+        const bucket = beforeMap.get(key);
+        if (bucket) {
+          bucket.push(el);
+        } else {
+          beforeMap.set(key, [el]);
+        }
       }
 
-      /** @type {Map<string, SnapshotElement>} */
+      /** @type {Map<string, SnapshotElement[]>} */
       const afterMap = new Map();
       for (const el of after.elements) {
         const key = `${el.role}|${el.name}`;
-        afterMap.set(key, el);
+        const bucket = afterMap.get(key);
+        if (bucket) {
+          bucket.push(el);
+        } else {
+          afterMap.set(key, [el]);
+        }
       }
 
       /** @type {SnapshotElement[]} */
@@ -268,11 +280,14 @@ if (!window.__browserCliInjected) {
       /** @type {Array<{element: SnapshotElement, changes: string[]}>} */
       this.changed = [];
 
-      // Find added and changed elements
-      for (const [key, el] of afterMap) {
-        const beforeEl = beforeMap.get(key);
-        if (beforeEl) {
-          // Check for changes
+      // Pair up elements positionally within each signature bucket.
+      for (const [key, afterEls] of afterMap) {
+        const beforeEls = beforeMap.get(key) ?? [];
+        const paired = Math.min(beforeEls.length, afterEls.length);
+
+        for (let i = 0; i < paired; i++) {
+          const beforeEl = beforeEls[i];
+          const el = afterEls[i];
           const changes = [];
           if (beforeEl.value !== el.value) {
             changes.push(
@@ -287,15 +302,19 @@ if (!window.__browserCliInjected) {
           if (changes.length > 0) {
             this.changed.push({ element: el, changes });
           }
-        } else {
-          this.added.push(el);
+        }
+
+        // Surplus after-elements are additions
+        for (let i = paired; i < afterEls.length; i++) {
+          this.added.push(afterEls[i]);
         }
       }
 
-      // Find removed elements
-      for (const [key, el] of beforeMap) {
-        if (!afterMap.has(key)) {
-          this.removed.push(el);
+      // Surplus before-elements are removals
+      for (const [key, beforeEls] of beforeMap) {
+        const afterCount = afterMap.get(key)?.length ?? 0;
+        for (let i = afterCount; i < beforeEls.length; i++) {
+          this.removed.push(beforeEls[i]);
         }
       }
     }
