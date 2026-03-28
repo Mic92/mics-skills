@@ -81,20 +81,6 @@ export default [
       "prefer-const": "error",
       "no-var": "error",
 
-      // Code style
-      indent: ["error", 2, { SwitchCase: 1 }],
-      quotes: ["error", "single", { avoidEscape: true }],
-      semi: ["error", "always"],
-      "comma-dangle": ["error", "never"],
-      "array-bracket-spacing": ["error", "never"],
-      "object-curly-spacing": ["error", "always"],
-      "space-before-blocks": "error",
-      "keyword-spacing": "error",
-      "space-infix-ops": "error",
-      "no-trailing-spaces": "error",
-      "eol-last": "error",
-      "no-multiple-empty-lines": ["error", { max: 2, maxEOF: 1 }],
-
       // JSDoc rules
       "jsdoc/check-alignment": "warn",
       "jsdoc/check-param-names": "warn",
