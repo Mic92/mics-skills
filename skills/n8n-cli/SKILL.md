@@ -1,9 +1,32 @@
 ---
 name: n8n-cli
-description: Manage n8n workflows, credentials, executions, tags, and data tables via the n8n REST API.
+description: "Manage n8n workflows, credentials, executions, tags, and data tables via the n8n REST API. Use when the user asks about n8n, creating or triggering workflows, managing n8n credentials, checking execution history, or interacting with the n8n API."
 ---
 
 Default output is LLM-friendly text. `-j`/`--json` for JSON. Pipe with `- ` for stdin.
+
+## Edit-and-update workflow
+
+```bash
+# 1. Export workflow to local file
+n8n-cli workflow get <id> -j > wf.json
+# 2. Edit wf.json as needed
+# 3. Push changes back
+n8n-cli workflow update <id> wf.json
+# 4. Verify the update
+n8n-cli workflow get <id>
+```
+
+For bulk sync, always dry-run first:
+
+```bash
+n8n-cli import -d ./definitions --dry-run   # preview server → local
+n8n-cli import -d ./definitions             # execute
+n8n-cli apply -d ./definitions --dry-run    # preview local → server
+n8n-cli apply -d ./definitions              # execute
+```
+
+## Command reference
 
 ```bash
 # Credentials — list|get|create|update|delete|test|schema
@@ -42,10 +65,8 @@ n8n-cli datatable delete-rows <id> --filter '<json>' [--dry-run]
 # Test webhook
 n8n-cli test <id> [-d '{"key":"val"}'] [--wait-execution] [--activate] [--dry-run]
 
-# Bulk sync
-n8n-cli import -d ./definitions [--ids a,b] [--dry-run]   # server → local JSON
-n8n-cli apply -d ./definitions [--ids a,b] [--dry-run] [--force]  # local → server
-
 # Raw API
 n8n-cli raw GET|POST|PUT|DELETE /path [body.json]
 ```
+
+See [README.md](../../n8n-cli/README.md) for installation and configuration.

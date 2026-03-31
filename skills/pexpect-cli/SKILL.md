@@ -1,6 +1,6 @@
 ---
 name: pexpect-cli
-description: Persistent pexpect sessions for automating interactive terminal applications. Use when you need to control interactive programs like ssh, databases, or debuggers that require user input.
+description: "Persistent pexpect sessions for spawning processes, sending commands, and matching expected output in interactive terminal applications. Use when you need to automate interactive programs like ssh, databases, debuggers, REPLs, or any CLI that requires user input or password prompts."
 ---
 
 # Usage
@@ -70,5 +70,7 @@ EOF
 
 - `pexpect`: The pexpect module
 - `child`: Persistent child process variable (persists across executions)
+
+Set timeouts on `expect()` calls to avoid hangs: `child.expect('prompt', timeout=30)`. Handle `pexpect.TIMEOUT` and `pexpect.EOF` for robustness.
 
 See [README.md](../../pexpect-cli/README.md) for installation, monitoring, and advanced usage.
