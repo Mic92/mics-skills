@@ -1,6 +1,6 @@
 ---
 name: tasker-cli
-description: Deploy and trigger Tasker tasks on Android. Use for automating Android via Tasker WebUI and adb.
+description: Deploy and trigger Tasker tasks on Android via the Tasker WebUI and adb. Use for building Tasker automations from JSON.
 ---
 
 # Usage

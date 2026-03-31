@@ -1,74 +1,32 @@
 ---
 name: pexpect-cli
-description: Persistent pexpect sessions for automating interactive terminal applications. Use when you need to control interactive programs like ssh, databases, or debuggers that require user input.
+description: Persistent pexpect sessions. Use when automating interactive terminal programs (ssh, databases, debuggers, REPLs).
 ---
 
-# Usage
+Each session is a long-lived Python namespace: **all** variables, imports, and functions persist across calls.
+Exceptions return exit 1 but the session stays alive. Expression results are not echoed; use `print()`.
 
 ```bash
-# Start a new session
-pexpect-cli --start
-# 888d9bf4
-
-# Start with a label
-pexpect-cli --start --name ssh-prod
-# a3f4b2c1
-
-# Execute code in a session
-pexpect-cli 888d9bf4 <<'EOF'
-child = pexpect.spawn("bash")
-child.sendline("pwd")
-child.expect(r"\$")
-print(child.before.decode())
-EOF
-
-# List sessions
+pexpect-cli --start [--name label]   # → prints session id
 pexpect-cli --list
+pexpect-cli --stop <id>              # also kills spawned children
 
-# Stop a session
-pexpect-cli --stop 888d9bf4
-```
-
-# Examples
-
-## SSH Session
-
-```bash
-session=$(pexpect-cli --start --name ssh-session)
-
+session=$(pexpect-cli --start --name ssh)
 pexpect-cli $session <<'EOF'
-child = pexpect.spawn('ssh user@example.com')
-child.expect('password:')
-child.sendline('mypassword')
-child.expect('\$')
-print("Connected!")
+child = pexpect.spawn('ssh user@host', encoding='utf-8')  # encoding → .before is str not bytes
+child.expect('password:', timeout=30)
+child.sendline('secret')
+child.expect(r'\$')
 EOF
 
-# Run commands
+# child still alive next call
 pexpect-cli $session <<'EOF'
 child.sendline('uptime')
-child.expect('\$')
-print(child.before.decode())
+child.expect(r'\$')
+print(child.before)
 EOF
 ```
 
-## Database Interaction
+Only stdout is returned. stderr and full history go to `pueue log` (find task id via `pueue status --group pexpect`).
 
-```bash
-session=$(pexpect-cli --start --name db-session)
-
-pexpect-cli $session <<'EOF'
-child = pexpect.spawn('sqlite3 mydb.db')
-child.expect('sqlite>')
-child.sendline('.tables')
-child.expect('sqlite>')
-print("Tables:", child.before.decode())
-EOF
-```
-
-# Available in Namespace
-
-- `pexpect`: The pexpect module
-- `child`: Persistent child process variable (persists across executions)
-
-See [README.md](../../pexpect-cli/README.md) for installation, monitoring, and advanced usage.
+Always set `timeout=` on `expect()`. Catch `pexpect.TIMEOUT` / `pexpect.EOF` for robustness.

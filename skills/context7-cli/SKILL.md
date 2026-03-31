@@ -1,24 +1,17 @@
 ---
 name: context7-cli
-description: Fetch up-to-date library documentation from Context7. Use for getting code examples and API docs for any library.
+description: Fetch up-to-date library documentation and code examples from Context7. Use for getting current API docs and snippets for any library or framework.
 ---
 
-# Usage
+Two-step: `search` resolves a library name to a Context7 ID, then `docs` fetches focused documentation for that ID. IDs are not guessable — always search first.
 
 ```bash
-# Search for libraries
-context7-cli search react "how to use hooks"
+# 1. Find the library ID (output shows IDs like /reactjs/react.dev)
+context7-cli search react "hooks"
 
-# Get documentation (use library ID from search)
-context7-cli docs /vercel/next.js "middleware authentication"
+# 2. Fetch docs using the ID + a topic query
+context7-cli docs /reactjs/react.dev "useState examples"
 
-# With specific version
+# Pin to a specific version
 context7-cli docs /vercel/next.js/v14.3.0 "app router"
-
-# JSON output
-context7-cli search --json react "hooks" | jq '.results[0].id'
-context7-cli docs --json /vercel/next.js "routing"
-
-# With explicit API key
-context7-cli -k "ctx7sk_xxx" search react "hooks"
 ```

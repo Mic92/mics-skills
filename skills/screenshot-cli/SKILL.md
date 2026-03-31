@@ -1,6 +1,6 @@
 ---
 name: screenshot-cli
-description: Take screenshots. Use when needing to see the screen or debug graphical issues.
+description: "Capture full-screen, window, or region screenshots. Use when needing to see the screen or debug UI and graphical issues."
 ---
 
 # Usage
