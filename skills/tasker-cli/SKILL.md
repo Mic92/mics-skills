@@ -1,6 +1,6 @@
 ---
 name: tasker-cli
-description: Deploy and trigger Tasker tasks on Android. Use for automating Android via Tasker WebUI and adb.
+description: "Deploy, trigger, and configure Tasker tasks and profiles on Android devices. Use when the user asks about phone automation, running Tasker tasks, automating Android, or managing Tasker profiles via WebUI and adb."
 ---
 
 # Usage
@@ -122,6 +122,15 @@ and `%caller2` has the profile info.
 `%GF_CURRENT` is global (survives across tasks). `%place` is local
 (lowercase, scoped to the current task invocation).
 
+## Deploy-and-verify workflow
+
+```bash
+tasker-cli deploy task.json --dry-run   # 1. validate first
+tasker-cli deploy task.json --replace   # 2. deploy
+tasker-cli show                         # 3. confirm task loaded
+tasker-cli trigger "My Task" --par1 "x" # 4. test execution
+```
+
 ## Other commands
 
 ```bash
@@ -130,6 +139,8 @@ tasker-cli show                       # show current task actions
 tasker-cli specs --search flash       # search action specs
 tasker-cli trigger "My Task" --par1 "value"
 ```
+
+See [README.md](../../tasker-cli/README.md) for installation and full documentation.
 
 ## Environment variables
 

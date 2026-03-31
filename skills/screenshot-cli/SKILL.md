@@ -1,6 +1,6 @@
 ---
 name: screenshot-cli
-description: Take screenshots. Use when needing to see the screen or debug graphical issues.
+description: "Capture full-screen, window, or region screenshots on macOS and KDE Wayland. Use when needing to see the screen, take a screen capture, snapshot the display, or debug UI and graphical issues."
 ---
 
 # Usage
