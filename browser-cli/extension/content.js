@@ -1798,11 +1798,16 @@ if (!window.__browserCliInjected) {
       return waitForIdle(stableMs, timeout);
     }
 
+    // innerText, not textContent: textContent includes <script>/<style>
+    // bodies and display:none elements, so wait("text", "Loading") would
+    // match the string inside any inline script that mentions it, and
+    // wait("gone", X) would never resolve if X also appears in script
+    // source. innerText is layout-aware — it sees what the user sees.
     if (condition === "text" && typeof value === "string") {
-      // Wait for text to appear
       const startTime = Date.now();
       while (Date.now() - startTime < timeout) {
-        if (document.body.textContent?.includes(value)) {
+        // eslint-disable-next-line unicorn/prefer-dom-node-text-content -- innerText is the point: skip script/style/hidden
+        if (document.body?.innerText.includes(value)) {
           return { waited: `text:${value}` };
         }
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -1811,10 +1816,10 @@ if (!window.__browserCliInjected) {
     }
 
     if (condition === "gone" && typeof value === "string") {
-      // Wait for text to disappear
       const startTime = Date.now();
       while (Date.now() - startTime < timeout) {
-        if (!document.body.textContent?.includes(value)) {
+        // eslint-disable-next-line unicorn/prefer-dom-node-text-content -- innerText is the point: skip script/style/hidden
+        if (!document.body?.innerText.includes(value)) {
           return { waited: `gone:${value}` };
         }
         await new Promise((resolve) => setTimeout(resolve, 100));
