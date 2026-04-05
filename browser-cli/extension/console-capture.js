@@ -94,7 +94,19 @@ if (!window.__browserCliConsoleCapture) {
       exportFunction(
         function (/** @type {unknown[]} */ ...args) {
           record(method, args);
-          return original.apply(pageConsole, args);
+          // `args` is a content-script-compartment Array. As of Firefox 149
+          // page-world Function.prototype.apply can no longer read .length
+          // on it through the Xray wrapper ("Permission denied to access
+          // property 'length'"). The throw escapes to the page caller and
+          // halts top-level script eval, which is how YouTube ended up
+          // stuck on its skeleton page. Copy into a page-compartment Array
+          // first; individual values pass through Xray fine even when they
+          // are not structured-cloneable (functions, DOM nodes).
+          const pageArgs = new pageWindow.Array();
+          for (const arg of args) {
+            pageArgs.push(arg);
+          }
+          return original.apply(pageConsole, pageArgs);
         },
         pageConsole,
         { defineAs: method },
