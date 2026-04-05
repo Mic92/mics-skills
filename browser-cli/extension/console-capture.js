@@ -47,6 +47,14 @@ if (!window.__browserCliConsoleCapture) {
         return "undefined";
       }
       if (typeof arg === "object") {
+        // Error objects have non-enumerable message/stack, so
+        // JSON.stringify gives "{}". DevTools shows them via String().
+        // Object.prototype.toString sees through Xray and matches
+        // page-world Error/DOMException without instanceof games.
+        const tag = Object.prototype.toString.call(arg);
+        if (tag === "[object Error]" || tag === "[object DOMException]") {
+          return String(arg);
+        }
         return JSON.stringify(arg);
       }
       return String(arg);
@@ -120,6 +128,20 @@ if (!window.__browserCliConsoleCapture) {
       exportFunction(
         /** @param {ErrorEvent} e */
         function (e) {
+          // capture:true also delivers <img>/<script>/<link> load failures.
+          // Those events target the element rather than window and carry
+          // no message/filename — uBlock alone produces dozens per page,
+          // each one previously logging as "Uncaught undefined (...)".
+          // e.message is the reliable discriminator; e.target identity
+          // checks fail because pageWindow is Xray-unwrapped and event
+          // targets come back wrapped.
+          if (e.message === undefined) {
+            const t = /** @type {any} */ (e.target);
+            record("error", [
+              `Resource load failed: <${t?.tagName?.toLowerCase()}> ${t?.src || t?.href || ""}`,
+            ]);
+            return;
+          }
           record("error", [
             `Uncaught ${e.message} (${e.filename}:${e.lineno}:${e.colno})`,
           ]);
