@@ -1686,32 +1686,34 @@ if (!window.__browserCliInjected) {
   }
 
   /**
-   * Get snapshot of the page
-   * Returns full snapshot on first call, diff on subsequent calls (to save tokens)
-   * @param {SnapOptions & {full?: boolean}} [options] - Filter options, use {full: true} for full snapshot
+   * Get snapshot of the page.
+   *
+   * Unfiltered calls are stateful: the first returns a full Snapshot,
+   * subsequent ones return a SnapshotDiff against the previous unfiltered
+   * call. This is the cheap-tokens path — you snap(), interact, snap()
+   * again, and only see what moved.
+   *
+   * Filtered calls (forms/links/buttons/text) are stateless side-queries:
+   * always full, never touch the diff baseline. Passing {full: true} forces
+   * a full snapshot and resets the baseline.
+   *
+   * @param {SnapOptions & {full?: boolean}} [options]
    * @returns {Snapshot|SnapshotDiff}
    */
   function snap(options) {
-    const snapshot = generateSnapshot(options);
+    const { full, ...filters } = options ?? {};
+    const filtered = Object.keys(filters).length > 0;
+    const snapshot = generateSnapshot(filtered ? filters : undefined);
 
-    // If full snapshot explicitly requested or options are set (filtering), return full
-    if (
-      options?.full ||
-      (options && Object.keys(options).some((k) => k !== "full"))
-    ) {
-      if (!options || !Object.keys(options).some((k) => k !== "full")) {
-        lastSnapshot = snapshot;
-      }
+    if (filtered) {
       return snapshot;
     }
 
-    // First call or no previous snapshot - return full snapshot
-    if (!lastSnapshot) {
+    if (full || !lastSnapshot) {
       lastSnapshot = snapshot;
       return snapshot;
     }
 
-    // Return diff to save tokens
     const result = snapshot.diff(lastSnapshot);
     lastSnapshot = snapshot;
     return result;

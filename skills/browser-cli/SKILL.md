@@ -27,10 +27,11 @@ await select(6, "value")
 key("Enter")
 
 // Inspection
-snap()                               // full snapshot with refs
-snap({forms|links|buttons: true})    // filter by type
-snap({text: "login"})                // filter by text
-diff()                               // changes since last snap()
+snap()                               // full snapshot first call,
+                                     // diff vs previous on later calls
+snap({full: true})                   // force full snapshot
+snap({forms|links|buttons: true})    // filter by type (always full)
+snap({text: "login"})                // filter by text (always full)
 logs()                               // console logs
 
 // Waiting
