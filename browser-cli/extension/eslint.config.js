@@ -32,6 +32,8 @@ export default [
         HTMLSelectElement: "readonly",
         HTMLImageElement: "readonly",
         DataTransfer: "readonly",
+        File: "readonly",
+        atob: "readonly",
         DragEvent: "readonly",
         Node: "readonly",
         NodeList: "readonly",

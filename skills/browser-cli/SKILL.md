@@ -6,9 +6,10 @@ description: Control Firefox browser from the command line. Use for web automati
 # Usage
 
 ```bash
-browser-cli --list                       # List managed tabs
-browser-cli --go "https://example.com"   # Open page, prints tab ID (e.g. abc123)
-browser-cli abc123 <<< 'snap()'          # Execute JS in that tab
+TAB=$(browser-cli --go "https://example.com")  # tab ID on stdout
+browser-cli $TAB <<< 'snap()'                  # execute JS in that tab
+browser-cli --list                             # TSV: id⇥*⇥url⇥title
+browser-cli --list --json                      # machine-readable
 ```
 
 # JavaScript API
@@ -30,8 +31,11 @@ key("Enter")
 snap()                               // full snapshot first call,
                                      // diff vs previous on later calls
 snap({full: true})                   // force full snapshot
+snap({interactive: true})            // only buttons/links/inputs (cheap)
 snap({forms|links|buttons: true})    // filter by type (always full)
 snap({text: "login"})                // filter by text (always full)
+get(1, "text")                       // text|html|value|attr:name|count
+is(2, "visible")                     // visible|enabled|checked -> bool
 logs()                               // console logs
 
 // Waiting
@@ -41,6 +45,8 @@ await wait("text", "Success")        // text appears
 await wait("gone", "Loading")        // text disappears
 
 // Other
+scroll("down")                       // also: up|top|bottom, or scroll(ref)
+await upload(3, "/path/to/file.pdf") // <input type=file> (chunked, any size)
 await download(url, "file.pdf")      // -> ~/Downloads/
 await shot("/tmp/page.png")          // screenshot (omit path for data URL)
 read()                               // article text via Readability
@@ -64,11 +70,11 @@ markdown without a browser tab — prefer for public static articles/docs.
 # Example: Login Flow
 
 ```bash
-browser-cli --go "https://example.com/login"   # -> tab h9Jk3b
-browser-cli h9Jk3b <<< 'snap()'
+TAB=$(browser-cli --go "https://example.com/login")
+browser-cli $TAB <<< 'snap()'
 # [1] input "Email"  [2] input "Password"  [3] button "Sign In"
 
-browser-cli h9Jk3b <<'EOF'
+browser-cli $TAB <<'EOF'
 await type(1, "user@test.com")
 await type(2, "secret123")
 await click(3)

@@ -11,6 +11,13 @@
  * @property {CommandParams} [params] - Command parameters
  * @property {string} [id] - Unique message ID
  * @property {string} [tabId] - Target tab ID for the command
+ * @property {FileChunk} [chunk] - One slice of a streamed file (read-files)
+ *
+ * @typedef {object} FileChunk
+ * @property {number} file - Index into the requested paths array
+ * @property {string} name - Basename of the file
+ * @property {string} mime - Best-guess content type
+ * @property {string} data - Base64 slice (3-byte-aligned, joinable)
  *
  * @typedef {object} Message
  * @property {string} command - The command to execute
@@ -29,7 +36,7 @@
 /** @type {browser.runtime.Port|undefined} Native messaging port */
 let nativePort;
 
-/** @type {Record<string, {resolve: Function, reject: Function}>} Message handlers from content scripts */
+/** @type {Record<string, {resolve: Function, reject: Function, chunk?: (c: FileChunk) => void}>} Message handlers from content scripts */
 const messageHandlers = {};
 
 /** @type {Map<string, {tabId: number, url: string, title: string}>} Map of managed tabs with short IDs */
@@ -74,7 +81,11 @@ function connectNativeHost() {
 
     nativePort.onMessage.addListener(async (msg) => {
       const message = /** @type {NativeMessage} */ (msg);
-      console.log("Received from native host:", message);
+      // Chunks can be 700KB each; logging them floods devtools and
+      // pins memory until the console is cleared.
+      if (!message.chunk) {
+        console.log("Received from native host:", message);
+      }
 
       if (message.ready && message.socket_path) {
         console.log(
@@ -84,9 +95,16 @@ function connectNativeHost() {
         return;
       }
 
-      // Handle responses to our requests (e.g., save-screenshot)
+      // Handle responses to our requests (e.g., save-screenshot, read-files)
       if (message.id && messageHandlers[message.id]) {
         const handler = messageHandlers[message.id];
+        // Chunked transfers (read-files) send N chunk messages followed
+        // by a final non-chunk completion. Keep the handler alive until
+        // that final message arrives.
+        if (message.chunk && handler.chunk) {
+          handler.chunk(message.chunk);
+          return;
+        }
         delete messageHandlers[message.id];
         handler.resolve(message);
         return;
@@ -186,13 +204,33 @@ async function sendToContentScript(command, params = {}, targetTabId) {
 // Browser-level commands (require background script)
 // ============================================================================
 
+/** URL schemes that content scripts cannot be injected into.
+ *  executeScript() throws "Missing host permission" on these even with
+ *  <all_urls> — they're hard-excluded by the WebExtension security model. */
+const PRIVILEGED_URL_PREFIXES = [
+  "about:",
+  "moz-extension:",
+  "chrome:",
+  "resource:",
+  "javascript:",
+  "data:",
+  "view-source:",
+];
+
 /**
  * Navigate a managed tab to a new URL and wait for load
  * @param {string} url - URL to navigate to
  * @param {string} [tabId] - Tab ID (defaults to active tab)
- * @returns {Promise<{url: string}>}
+ * @returns {Promise<{url: string, tabId: string}>}
  */
 async function navigate(url, tabId) {
+  const blocked = PRIVILEGED_URL_PREFIXES.find((p) => url.startsWith(p));
+  if (blocked) {
+    throw new Error(
+      `Cannot inject into ${blocked} URLs (browser security policy). Use http(s):// or file://`,
+    );
+  }
+
   let targetId = tabId;
   if (!targetId) {
     // Validate activeTabId before using it — it can go stale.
@@ -249,7 +287,9 @@ async function navigate(url, tabId) {
   // Re-inject content script
   await enableOnTab(browserTabId, targetId);
 
-  return { url };
+  // Always include tabId so the CLI can print it even on the
+  // existing-tab path (TAB=$(browser-cli --go ...) must always work).
+  return { url, tabId: targetId };
 }
 
 /**
@@ -342,6 +382,84 @@ async function saveScreenshotToFile(dataUrl, outputPath) {
 }
 
 /**
+ * Read local files via the native bridge so content scripts can populate
+ * <input type=file> without a user gesture. The extension itself has no
+ * filesystem access; the Python bridge does the actual disk I/O.
+ *
+ * Native messaging caps app→extension messages at 1MB, so the bridge
+ * streams files in chunks. We reassemble here per file index.
+ *
+ * @param {string[]} paths - Absolute paths on the local filesystem
+ * @returns {Promise<{name: string, mime: string, data: string}[]>}
+ */
+async function readLocalFiles(paths) {
+  if (!nativePort) {
+    throw new Error("Native messaging not connected - cannot read files");
+  }
+
+  const messageId = `read_files_${Date.now()}`;
+  /** @type {{name: string, mime: string, parts: string[]}[]} */
+  const buffers = paths.map(() => ({ name: "", mime: "", parts: [] }));
+
+  return new Promise((resolve, reject) => {
+    // Timeout is sliding: any chunk arrival resets it. A 100MB file at
+    // 700KB/chunk is ~150 messages; we don't want a fixed deadline.
+    /** @type {ReturnType<typeof setTimeout>} */
+    let timeout;
+    const arm = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        delete messageHandlers[messageId];
+        reject(new Error("File read timeout (no data for 30s)"));
+      }, 30_000);
+    };
+    arm();
+
+    messageHandlers[messageId] = {
+      /** @param {{file: number, name: string, mime: string, data: string}} c */
+      chunk: (c) => {
+        arm();
+        const buf = buffers[c.file];
+        buf.name = c.name;
+        buf.mime = c.mime;
+        buf.parts.push(c.data);
+      },
+      /** @param {{success?: boolean, error?: string}} response */
+      resolve: (response) => {
+        clearTimeout(timeout);
+        if (response.success) {
+          resolve(
+            buffers.map((b) => ({
+              name: b.name,
+              mime: b.mime,
+              data: b.parts.join(""),
+            })),
+          );
+        } else {
+          reject(new Error(response.error || "Failed to read files"));
+        }
+      },
+      /** @param {Error} error */
+      reject: (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    };
+
+    if (!nativePort) {
+      reject(new Error("Native messaging disconnected"));
+      return;
+    }
+
+    nativePort.postMessage({
+      command: "read-files",
+      params: { paths },
+      id: messageId,
+    });
+  });
+}
+
+/**
  * List all managed tabs
  * @returns {Promise<{tabs: Array<{id: string, tabId: number, url: string, title: string, active: boolean}>}>}
  */
@@ -382,7 +500,6 @@ async function listTabs() {
 async function createNewTab(url) {
   const shortId = generateTabId();
   const tabUrl = url || "about:blank";
-
   const tab = await browser.tabs.create({ url: tabUrl, active: true });
 
   if (tab.id === undefined) {
@@ -739,6 +856,10 @@ browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
           }
           case "download": {
             result = await downloadFile(params.url, params.filename);
+            break;
+          }
+          case "read-files": {
+            result = await readLocalFiles(params.paths);
             break;
           }
           default: {

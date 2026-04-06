@@ -252,27 +252,40 @@ async def navigate_tab(
     """
     client = BrowserClient(socket, firefox_path=firefox_path)
     result = await client.send_command("go", {"url": url}, tab_id)
-    new_id = result.get("tabId")
-    if new_id and new_id != tab_id:
-        print(f"Opened {url} in new tab {new_id}")
+    # The extension always returns the tab ID it acted on. Print exactly
+    # that to stdout so `TAB=$(browser-cli --go ...)` works regardless of
+    # whether a tab was created or reused; prose goes to stderr.
+    final_id = result.get("tabId") or tab_id
+    if final_id and final_id != tab_id:
+        print(f"Opened {url} in new tab {final_id}", file=sys.stderr)
     else:
-        print(f"Navigated to {url}")
+        print(f"Navigated to {url}", file=sys.stderr)
+    if final_id:
+        print(final_id)
 
 
-async def list_tabs(socket: str | None, firefox_path: str | None = None) -> None:
+async def list_tabs(
+    socket: str | None,
+    firefox_path: str | None = None,
+    *,
+    as_json: bool = False,
+) -> None:
     """List all managed tabs."""
     client = BrowserClient(socket, firefox_path=firefox_path)
     tabs = await client.list_tabs()
+    if as_json:
+        print(json.dumps(tabs))
+        return
     if not tabs:
-        print("No managed tabs")
+        print("No managed tabs", file=sys.stderr)
         return
     for tab in tabs:
         tab_id = tab.get("id", "unknown")
         url = tab.get("url", "about:blank")
         title = tab.get("title", "Untitled")
-        active = " (active)" if tab.get("active") else ""
-        print(f"{tab_id}: {title}{active}")
-        print(f"       {url}")
+        active = "*" if tab.get("active") else " "
+        # ID first, fixed-width, tab-separated: parseable with `cut -f1`.
+        print(f"{tab_id}\t{active}\t{url}\t{title}")
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -285,12 +298,11 @@ Examples:
   # List managed tabs
   browser-cli --list
 
-  # Open a page (creates tab, prints its ID)
-  browser-cli --go "https://example.com"
-  # -> Opened https://example.com in new tab abc123
+  # Open a page; tab ID on stdout, prose on stderr
+  TAB=$(browser-cli --go "https://example.com")
 
   # Get snapshot of that tab
-  browser-cli abc123 <<< 'snap()'
+  browser-cli $TAB <<< 'snap()'
 
   # Form filling with refs
   browser-cli abc123 <<'EOF'
@@ -351,7 +363,12 @@ Tab management is done via CLI flags, not JS:
     parser.add_argument(
         "--list",
         action="store_true",
-        help="List all managed tabs",
+        help="List all managed tabs (TSV: id<TAB>active<TAB>url<TAB>title)",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output --list as JSON",
     )
     parser.add_argument(
         "--install-host",
@@ -402,7 +419,7 @@ def main() -> None:
             install_native_host()
         elif args.list:
             firefox_path = _resolve_firefox_path(args)
-            asyncio.run(list_tabs(args.socket, firefox_path=firefox_path))
+            asyncio.run(list_tabs(args.socket, firefox_path=firefox_path, as_json=args.json))
         elif args.go:
             firefox_path = _resolve_firefox_path(args)
             asyncio.run(navigate_tab(args.tab_id, args.go, args.socket, firefox_path=firefox_path))

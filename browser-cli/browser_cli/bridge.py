@@ -4,12 +4,20 @@ import asyncio
 import base64
 import json
 import logging
+import mimetypes
 import struct
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Native messaging caps app→extension messages at 1 MiB (Firefox
+# NativeMessaging.sys.mjs MAX_READ, Chrome kMaximumNativeMessageSize).
+# We chunk file payloads under that, leaving headroom for the JSON
+# envelope around each chunk.
+FILE_CHUNK_BYTES = 700_000
 
 
 class NativeMessagingBridge:
@@ -138,6 +146,9 @@ class NativeMessagingBridge:
         if command == "save-screenshot":
             await self._handle_save_screenshot(message)
             return
+        if command == "read-files":
+            await self._handle_read_files(message)
+            return
 
         if msg_id and msg_id in self.pending_responses:
             # This is a response to a CLI request
@@ -201,6 +212,55 @@ class NativeMessagingBridge:
                     "error": f"Failed to save screenshot: {e!s}",
                 },
             )
+
+    async def _handle_read_files(self, message: dict[str, Any]) -> None:
+        """Stream local files to the extension as base64 chunks.
+
+        The 1 MiB native-messaging cap is per-message, not per-connection,
+        so we side-step it by sending N chunk messages followed by a final
+        completion. The extension reassembles by file index.
+        """
+        msg_id = message.get("id")
+        paths = message.get("params", {}).get("paths", [])
+        try:
+            for chunk in self._iter_file_chunks(paths):
+                await self.write_native_message({"id": msg_id, "chunk": chunk})
+            await self.write_native_message({"id": msg_id, "success": True})
+        except OSError as e:
+            await self.write_native_message(
+                {"id": msg_id, "success": False, "error": str(e)},
+            )
+
+    @staticmethod
+    def _iter_file_chunks(
+        paths: list[str],
+    ) -> Iterator[dict[str, str | int]]:
+        """Yield base64 chunks per file, sized for the native-messaging cap.
+
+        Reads in raw-byte blocks aligned to 3 so each chunk's base64 is
+        self-contained (no '=' padding mid-stream) and the receiver can
+        simply concatenate before decoding.
+        """
+        # 3 raw bytes -> 4 base64 chars; align so chunks join cleanly.
+        raw_block = (FILE_CHUNK_BYTES // 4 * 3) // 3 * 3
+        for idx, raw in enumerate(paths):
+            p = Path(raw).expanduser()
+            mime, _ = mimetypes.guess_type(p.name)
+            mime = mime or "application/octet-stream"
+            sent = False
+            with p.open("rb") as fh:
+                while data := fh.read(raw_block):
+                    sent = True
+                    yield {
+                        "file": idx,
+                        "name": p.name,
+                        "mime": mime,
+                        "data": base64.b64encode(data).decode("ascii"),
+                    }
+            if not sent:
+                # Zero-byte file: still emit one chunk so the extension
+                # learns the name/mime.
+                yield {"file": idx, "name": p.name, "mime": mime, "data": ""}
 
     async def handle_cli_client(
         self,
