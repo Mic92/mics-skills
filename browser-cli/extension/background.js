@@ -342,6 +342,57 @@ async function saveScreenshotToFile(dataUrl, outputPath) {
 }
 
 /**
+ * Read local files via the native bridge so content scripts can populate
+ * <input type=file> without a user gesture. The extension itself has no
+ * filesystem access; the Python bridge does the actual disk I/O.
+ *
+ * @param {string[]} paths - Absolute paths on the local filesystem
+ * @returns {Promise<{name: string, mime: string, data: string}[]>}
+ */
+async function readLocalFiles(paths) {
+  if (!nativePort) {
+    throw new Error("Native messaging not connected - cannot read files");
+  }
+
+  const messageId = `read_files_${Date.now()}`;
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      delete messageHandlers[messageId];
+      reject(new Error("File read timeout"));
+    }, 30_000);
+
+    messageHandlers[messageId] = {
+      /** @param {{success?: boolean, result?: {name: string, mime: string, data: string}[], error?: string}} response */
+      resolve: (response) => {
+        clearTimeout(timeout);
+        if (response.success && response.result) {
+          resolve(response.result);
+        } else {
+          reject(new Error(response.error || "Failed to read files"));
+        }
+      },
+      /** @param {Error} error */
+      reject: (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    };
+
+    if (!nativePort) {
+      reject(new Error("Native messaging disconnected"));
+      return;
+    }
+
+    nativePort.postMessage({
+      command: "read-files",
+      params: { paths },
+      id: messageId,
+    });
+  });
+}
+
+/**
  * List all managed tabs
  * @returns {Promise<{tabs: Array<{id: string, tabId: number, url: string, title: string, active: boolean}>}>}
  */
@@ -739,6 +790,10 @@ browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
           }
           case "download": {
             result = await downloadFile(params.url, params.filename);
+            break;
+          }
+          case "read-files": {
+            result = await readLocalFiles(params.paths);
             break;
           }
           default: {

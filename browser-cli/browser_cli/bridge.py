@@ -4,6 +4,7 @@ import asyncio
 import base64
 import json
 import logging
+import mimetypes
 import struct
 import sys
 from pathlib import Path
@@ -138,6 +139,9 @@ class NativeMessagingBridge:
         if command == "save-screenshot":
             await self._handle_save_screenshot(message)
             return
+        if command == "read-files":
+            await self._handle_read_files(message)
+            return
 
         if msg_id and msg_id in self.pending_responses:
             # This is a response to a CLI request
@@ -201,6 +205,53 @@ class NativeMessagingBridge:
                     "error": f"Failed to save screenshot: {e!s}",
                 },
             )
+
+    async def _handle_read_files(self, message: dict[str, Any]) -> None:
+        """Read files from disk for upload(). Ships content as base64.
+
+        Native messaging caps a single message at 1 MB, so this rejects
+        anything that would push the response past that. Uploading a 50 MB
+        video is out of scope; uploading a CSV/PNG/PDF is the use case.
+        """
+        msg_id = message.get("id")
+        paths = message.get("params", {}).get("paths", [])
+        result, error = self._read_files_for_upload(paths)
+        if error is None:
+            await self.write_native_message(
+                {"id": msg_id, "success": True, "result": result},
+            )
+        else:
+            await self.write_native_message(
+                {"id": msg_id, "success": False, "error": error},
+            )
+
+    @staticmethod
+    def _read_files_for_upload(
+        paths: list[str],
+    ) -> tuple[list[dict[str, str]], str | None]:
+        """Load and base64-encode files within the native-messaging size budget."""
+        # Leave headroom for the JSON envelope around the base64 payload.
+        budget = 900_000
+        files: list[dict[str, str]] = []
+        for raw in paths:
+            p = Path(raw).expanduser()
+            try:
+                data = p.read_bytes()
+            except OSError as e:
+                return [], f"{raw}: {e}"
+            b64 = base64.b64encode(data).decode("ascii")
+            budget -= len(b64)
+            if budget < 0:
+                return [], (f"File(s) too large for native messaging (~1MB limit): {raw}")
+            mime, _ = mimetypes.guess_type(p.name)
+            files.append(
+                {
+                    "name": p.name,
+                    "mime": mime or "application/octet-stream",
+                    "data": b64,
+                },
+            )
+        return files, None
 
     async def handle_cli_client(
         self,

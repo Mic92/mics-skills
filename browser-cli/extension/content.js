@@ -1078,9 +1078,26 @@ if (!window.__browserCliInjected) {
    * @property {boolean} [forms] - Only form elements
    * @property {boolean} [links] - Only links
    * @property {boolean} [buttons] - Only buttons
+   * @property {boolean} [interactive] - Only interactive elements (links, buttons, inputs, clickables)
    * @property {string} [text] - Filter by text content
    * @property {number} [near] - Elements near ref
    */
+
+  /** Roles considered interactive for snap({interactive: true}) */
+  const INTERACTIVE_ROLES = new Set([
+    "link",
+    "button",
+    "input",
+    "textarea",
+    "select",
+    "checkbox",
+    "radio",
+    "tab",
+    "menuitem",
+    "combobox",
+    "slider",
+    "switch",
+  ]);
 
   /**
    * Generate snapshot with optional filtering
@@ -1120,6 +1137,15 @@ if (!window.__browserCliInjected) {
         continue;
       }
       if (options.buttons && role !== "button") {
+        continue;
+      }
+
+      if (
+        options.interactive &&
+        !INTERACTIVE_ROLES.has(role) &&
+        !role.startsWith("input[") &&
+        !attrs.includes("clickable")
+      ) {
         continue;
       }
 
@@ -1893,6 +1919,207 @@ if (!window.__browserCliInjected) {
   }
 
   // ============================================================================
+  // Surgical inspection (token-cheap alternatives to full snap())
+  // ============================================================================
+
+  /**
+   * Extract one piece of information from one element. Prefer this over
+   * snap() when you already have a ref and just need a value/attribute —
+   * a full snapshot can cost thousands of tokens, this costs ~nothing.
+   *
+   * @param {string|number} selector - Ref number or CSS selector
+   * @param {string} [what='text'] - text | html | value | count | attr:<name>
+   * @param {SelectorType} [selectorType='css']
+   * @returns {string|number|null}
+   */
+  function get(selector, what = "text", selectorType = "css") {
+    if (what === "count") {
+      // count only makes sense for CSS selectors (refs are unique)
+      if (typeof selector !== "string") {
+        throw new TypeError("get(..., 'count') requires a CSS selector string");
+      }
+      return document.querySelectorAll(selector).length;
+    }
+
+    const element = find(selector, selectorType);
+
+    if (what === "text") {
+      // innerText for layout-aware text (skips hidden/script), fall back
+      // to textContent for elements where innerText is empty (e.g. <option>).
+      // eslint-disable-next-line unicorn/prefer-dom-node-text-content -- innerText is layout-aware on purpose
+      const inner = element instanceof HTMLElement ? element.innerText : "";
+      return (inner || element.textContent || "").trim();
+    }
+    if (what === "html") {
+      return element.outerHTML;
+    }
+    if (what === "value") {
+      return /** @type {HTMLInputElement} */ (element).value ?? null; // eslint-disable-line unicorn/no-null
+    }
+    if (what.startsWith("attr:")) {
+      return element.getAttribute(what.slice(5));
+    }
+    throw new Error(
+      `Unknown 'what': ${what}. Use text|html|value|count|attr:<name>`,
+    );
+  }
+
+  /**
+   * Check element state. Returns a boolean instead of making you parse
+   * "[disabled]" / "[checked]" out of snapshot output.
+   *
+   * @param {string|number} selector - Ref number or CSS selector
+   * @param {'visible'|'enabled'|'checked'} what
+   * @param {SelectorType} [selectorType='css']
+   * @returns {boolean}
+   */
+  function is(selector, what, selectorType = "css") {
+    const element = find(selector, selectorType);
+
+    switch (what) {
+      case "visible": {
+        // offsetParent is null for display:none and ancestors with it.
+        // Also catch zero-size and visibility:hidden.
+        if (!(element instanceof HTMLElement)) {
+          return false;
+        }
+        // position:fixed elements have null offsetParent but are visible
+        if (
+          element.offsetParent === null &&
+          window.getComputedStyle(element).position !== "fixed"
+        ) {
+          return false;
+        }
+        const rect = element.getBoundingClientRect();
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          window.getComputedStyle(element).visibility !== "hidden"
+        );
+      }
+      case "enabled": {
+        const inputLike = /** @type {HTMLInputElement} */ (element);
+        return !inputLike.disabled && !element.hasAttribute("aria-disabled");
+      }
+      case "checked": {
+        const inputLike = /** @type {HTMLInputElement} */ (element);
+        return (
+          inputLike.checked === true ||
+          element.getAttribute("aria-checked") === "true"
+        );
+      }
+      default: {
+        throw new Error(`Unknown 'what': ${what}. Use visible|enabled|checked`);
+      }
+    }
+  }
+
+  /**
+   * Scroll the viewport, or scroll an element into view. Snapshots only
+   * see what's in the viewport, so this is the unlock for infinite-scroll
+   * pages and lazy-loaded content.
+   *
+   * @param {number|string} target - Ref/selector to scroll into view,
+   *   or a direction: 'up' | 'down' | 'left' | 'right' | 'top' | 'bottom'
+   * @param {number} [amount] - Pixels (for directions). Default: one viewport.
+   * @param {SelectorType} [selectorType='css']
+   * @returns {{scrolled: string|number, x: number, y: number}}
+   */
+  function scroll(target, amount, selectorType = "css") {
+    if (typeof target === "string") {
+      const dy = amount ?? window.innerHeight;
+      const dx = amount ?? window.innerWidth;
+      switch (target) {
+        case "down": {
+          window.scrollBy({ top: dy, behavior: "instant" });
+          break;
+        }
+        case "up": {
+          window.scrollBy({ top: -dy, behavior: "instant" });
+          break;
+        }
+        case "right": {
+          window.scrollBy({ left: dx, behavior: "instant" });
+          break;
+        }
+        case "left": {
+          window.scrollBy({ left: -dx, behavior: "instant" });
+          break;
+        }
+        case "top": {
+          window.scrollTo({ top: 0, behavior: "instant" });
+          break;
+        }
+        case "bottom": {
+          window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: "instant",
+          });
+          break;
+        }
+        default: {
+          // Not a direction keyword — treat as CSS selector
+          find(target, selectorType).scrollIntoView({
+            block: "center",
+            behavior: "instant",
+          });
+        }
+      }
+    } else {
+      // Numeric ref
+      find(target).scrollIntoView({ block: "center", behavior: "instant" });
+    }
+    return { scrolled: target, x: window.scrollX, y: window.scrollY };
+  }
+
+  /**
+   * Set files on a file input. The bridge reads the file from disk and
+   * ships it over as base64; we reconstruct a real File object here so
+   * the page's change handlers see exactly what they'd see from a
+   * native file picker.
+   *
+   * @param {string|number} selector - Ref or selector for <input type=file>
+   * @param {string|string[]} paths - Absolute path(s) on the local filesystem
+   * @param {SelectorType} [selectorType='css']
+   * @returns {Promise<{uploaded: string[], to: string|number}>}
+   */
+  async function upload(selector, paths, selectorType = "css") {
+    const element = /** @type {HTMLInputElement} */ (
+      find(selector, selectorType)
+    );
+    if (element.tagName !== "INPUT" || element.type !== "file") {
+      throw new Error(
+        `Element is not a file input. Found: <${element.tagName.toLowerCase()}${element.type ? ` type=${element.type}` : ""}>`,
+      );
+    }
+
+    const pathList = Array.isArray(paths) ? paths : [paths];
+    if (pathList.length > 1 && !element.multiple) {
+      throw new Error(
+        `Input does not accept multiple files (${pathList.length} given)`,
+      );
+    }
+
+    /** @type {{name: string, mime: string, data: string}[]} */
+    const fileData = await sendToBackground("read-files", { paths: pathList });
+
+    // DataTransfer is the only way to populate the otherwise read-only
+    // .files property without a trusted user gesture.
+    const dt = new DataTransfer();
+    for (const f of fileData) {
+      const bytes = Uint8Array.from(atob(f.data), (c) => c.codePointAt(0) ?? 0);
+      dt.items.add(new File([bytes], f.name, { type: f.mime }));
+    }
+
+    moveCursorToElement(element);
+    element.files = dt.files;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+
+    return { uploaded: pathList, to: selector };
+  }
+
+  // ============================================================================
   // Message handling for background script commands
   // ============================================================================
   // Reader Mode (Mozilla Readability)
@@ -2212,6 +2439,10 @@ if (!window.__browserCliInjected) {
     read,
     shot,
     download,
+    get,
+    is,
+    scroll,
+    upload,
   };
   const execApiNames = Object.keys(execApi);
   const execApiValues = Object.values(execApi);

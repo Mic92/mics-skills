@@ -30,8 +30,11 @@ key("Enter")
 snap()                               // full snapshot first call,
                                      // diff vs previous on later calls
 snap({full: true})                   // force full snapshot
+snap({interactive: true})            // only buttons/links/inputs (cheap)
 snap({forms|links|buttons: true})    // filter by type (always full)
 snap({text: "login"})                // filter by text (always full)
+get(1, "text")                       // text|html|value|attr:name|count
+is(2, "visible")                     // visible|enabled|checked -> bool
 logs()                               // console logs
 
 // Waiting
@@ -41,6 +44,8 @@ await wait("text", "Success")        // text appears
 await wait("gone", "Loading")        // text disappears
 
 // Other
+scroll("down")                       // also: up|top|bottom, or scroll(ref)
+await upload(3, "/path/to/file.pdf") // <input type=file>, ~1MB limit
 await download(url, "file.pdf")      // -> ~/Downloads/
 await shot("/tmp/page.png")          // screenshot (omit path for data URL)
 read()                               // article text via Readability
