@@ -1,29 +1,17 @@
 ---
 name: db-cli
-description: Search Deutsche Bahn train connections. Use for finding train routes, schedules, and travel times in Germany.
+description: Search Deutsche Bahn train connections. Use for train routes, schedules, and travel times in Germany.
 ---
 
-# Usage
+Station names are fuzzy-matched. No API key needed.
 
 ```bash
-# Basic search (uses current time)
-db-cli "Berlin Hbf" "München Hbf"
-
-# Search with specific departure time
-db-cli -d "2025-01-15T14:30" "Frankfurt" "Hamburg"
-
-# Search with arrival time
-db-cli -a "2025-01-15T18:00" "Köln" "Stuttgart"
+db-cli "Berlin Hbf" "München Hbf"                  # depart now
+db-cli -d "2026-04-10T14:30" Frankfurt Hamburg     # ISO departure
+db-cli -d "in 30 minutes" Hamburg Frankfurt        # relative
+db-cli -a "by 18:00" Köln Stuttgart                # arrive by (rolls to tomorrow if past)
+db-cli -t Berlin München                           # Deutschlandticket only (no ICE/IC/EC)
+db-cli -r 5 Berlin München                         # show 5 results (default 3)
 ```
 
-# Output Format
-
-Results show connections with:
-
-- Departure/arrival times
-- Duration
-- Number of transfers
-- Train types (ICE, IC, RE, etc.)
-- Platform information
-
-See [README.md](../../db-cli/README.md) for full documentation.
+Output: per-journey departure → arrival, duration, transfer count, per-leg train type and platforms. Ends with a pre-filled bahn.de booking URL.
