@@ -1890,11 +1890,13 @@ if (!window.__browserCliInjected) {
       browser.runtime.onMessage.addListener(handleResponse);
       browser.runtime.sendMessage({ command, params, bgMessageId: messageId });
 
-      // Timeout after 30 seconds
+      // Timeout after 30 seconds (5 min for file reads — chunked transfers
+      // of large uploads can legitimately take longer than 30s).
+      const ms = command === "read-files" ? 300_000 : 30_000;
       setTimeout(() => {
         browser.runtime.onMessage.removeListener(handleResponse);
         reject(new Error("Background script timeout"));
-      }, 30_000);
+      }, ms);
     });
   }
 

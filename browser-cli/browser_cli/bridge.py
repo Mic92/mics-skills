@@ -7,10 +7,17 @@ import logging
 import mimetypes
 import struct
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Native messaging caps app→extension messages at 1 MiB (Firefox
+# NativeMessaging.sys.mjs MAX_READ, Chrome kMaximumNativeMessageSize).
+# We chunk file payloads under that, leaving headroom for the JSON
+# envelope around each chunk.
+FILE_CHUNK_BYTES = 700_000
 
 
 class NativeMessagingBridge:
@@ -207,51 +214,53 @@ class NativeMessagingBridge:
             )
 
     async def _handle_read_files(self, message: dict[str, Any]) -> None:
-        """Read files from disk for upload(). Ships content as base64.
+        """Stream local files to the extension as base64 chunks.
 
-        Native messaging caps a single message at 1 MB, so this rejects
-        anything that would push the response past that. Uploading a 50 MB
-        video is out of scope; uploading a CSV/PNG/PDF is the use case.
+        The 1 MiB native-messaging cap is per-message, not per-connection,
+        so we side-step it by sending N chunk messages followed by a final
+        completion. The extension reassembles by file index.
         """
         msg_id = message.get("id")
         paths = message.get("params", {}).get("paths", [])
-        result, error = self._read_files_for_upload(paths)
-        if error is None:
+        try:
+            for chunk in self._iter_file_chunks(paths):
+                await self.write_native_message({"id": msg_id, "chunk": chunk})
+            await self.write_native_message({"id": msg_id, "success": True})
+        except OSError as e:
             await self.write_native_message(
-                {"id": msg_id, "success": True, "result": result},
-            )
-        else:
-            await self.write_native_message(
-                {"id": msg_id, "success": False, "error": error},
+                {"id": msg_id, "success": False, "error": str(e)},
             )
 
     @staticmethod
-    def _read_files_for_upload(
+    def _iter_file_chunks(
         paths: list[str],
-    ) -> tuple[list[dict[str, str]], str | None]:
-        """Load and base64-encode files within the native-messaging size budget."""
-        # Leave headroom for the JSON envelope around the base64 payload.
-        budget = 900_000
-        files: list[dict[str, str]] = []
-        for raw in paths:
+    ) -> Iterator[dict[str, str | int]]:
+        """Yield base64 chunks per file, sized for the native-messaging cap.
+
+        Reads in raw-byte blocks aligned to 3 so each chunk's base64 is
+        self-contained (no '=' padding mid-stream) and the receiver can
+        simply concatenate before decoding.
+        """
+        # 3 raw bytes -> 4 base64 chars; align so chunks join cleanly.
+        raw_block = (FILE_CHUNK_BYTES // 4 * 3) // 3 * 3
+        for idx, raw in enumerate(paths):
             p = Path(raw).expanduser()
-            try:
-                data = p.read_bytes()
-            except OSError as e:
-                return [], f"{raw}: {e}"
-            b64 = base64.b64encode(data).decode("ascii")
-            budget -= len(b64)
-            if budget < 0:
-                return [], (f"File(s) too large for native messaging (~1MB limit): {raw}")
             mime, _ = mimetypes.guess_type(p.name)
-            files.append(
-                {
-                    "name": p.name,
-                    "mime": mime or "application/octet-stream",
-                    "data": b64,
-                },
-            )
-        return files, None
+            mime = mime or "application/octet-stream"
+            sent = False
+            with p.open("rb") as fh:
+                while data := fh.read(raw_block):
+                    sent = True
+                    yield {
+                        "file": idx,
+                        "name": p.name,
+                        "mime": mime,
+                        "data": base64.b64encode(data).decode("ascii"),
+                    }
+            if not sent:
+                # Zero-byte file: still emit one chunk so the extension
+                # learns the name/mime.
+                yield {"file": idx, "name": p.name, "mime": mime, "data": ""}
 
     async def handle_cli_client(
         self,

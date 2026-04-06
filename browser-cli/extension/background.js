@@ -11,6 +11,13 @@
  * @property {CommandParams} [params] - Command parameters
  * @property {string} [id] - Unique message ID
  * @property {string} [tabId] - Target tab ID for the command
+ * @property {FileChunk} [chunk] - One slice of a streamed file (read-files)
+ *
+ * @typedef {object} FileChunk
+ * @property {number} file - Index into the requested paths array
+ * @property {string} name - Basename of the file
+ * @property {string} mime - Best-guess content type
+ * @property {string} data - Base64 slice (3-byte-aligned, joinable)
  *
  * @typedef {object} Message
  * @property {string} command - The command to execute
@@ -29,7 +36,7 @@
 /** @type {browser.runtime.Port|undefined} Native messaging port */
 let nativePort;
 
-/** @type {Record<string, {resolve: Function, reject: Function}>} Message handlers from content scripts */
+/** @type {Record<string, {resolve: Function, reject: Function, chunk?: (c: FileChunk) => void}>} Message handlers from content scripts */
 const messageHandlers = {};
 
 /** @type {Map<string, {tabId: number, url: string, title: string}>} Map of managed tabs with short IDs */
@@ -84,9 +91,16 @@ function connectNativeHost() {
         return;
       }
 
-      // Handle responses to our requests (e.g., save-screenshot)
+      // Handle responses to our requests (e.g., save-screenshot, read-files)
       if (message.id && messageHandlers[message.id]) {
         const handler = messageHandlers[message.id];
+        // Chunked transfers (read-files) send N chunk messages followed
+        // by a final non-chunk completion. Keep the handler alive until
+        // that final message arrives.
+        if (message.chunk && handler.chunk) {
+          handler.chunk(message.chunk);
+          return;
+        }
         delete messageHandlers[message.id];
         handler.resolve(message);
         return;
@@ -346,6 +360,9 @@ async function saveScreenshotToFile(dataUrl, outputPath) {
  * <input type=file> without a user gesture. The extension itself has no
  * filesystem access; the Python bridge does the actual disk I/O.
  *
+ * Native messaging caps app→extension messages at 1MB, so the bridge
+ * streams files in chunks. We reassemble here per file index.
+ *
  * @param {string[]} paths - Absolute paths on the local filesystem
  * @returns {Promise<{name: string, mime: string, data: string}[]>}
  */
@@ -355,19 +372,43 @@ async function readLocalFiles(paths) {
   }
 
   const messageId = `read_files_${Date.now()}`;
+  /** @type {{name: string, mime: string, parts: string[]}[]} */
+  const buffers = paths.map(() => ({ name: "", mime: "", parts: [] }));
 
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      delete messageHandlers[messageId];
-      reject(new Error("File read timeout"));
-    }, 30_000);
+    // Timeout is sliding: any chunk arrival resets it. A 100MB file at
+    // 700KB/chunk is ~150 messages; we don't want a fixed deadline.
+    /** @type {ReturnType<typeof setTimeout>} */
+    let timeout;
+    const arm = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        delete messageHandlers[messageId];
+        reject(new Error("File read timeout (no data for 30s)"));
+      }, 30_000);
+    };
+    arm();
 
     messageHandlers[messageId] = {
-      /** @param {{success?: boolean, result?: {name: string, mime: string, data: string}[], error?: string}} response */
+      /** @param {{file: number, name: string, mime: string, data: string}} c */
+      chunk: (c) => {
+        arm();
+        const buf = buffers[c.file];
+        buf.name = c.name;
+        buf.mime = c.mime;
+        buf.parts.push(c.data);
+      },
+      /** @param {{success?: boolean, error?: string}} response */
       resolve: (response) => {
         clearTimeout(timeout);
-        if (response.success && response.result) {
-          resolve(response.result);
+        if (response.success) {
+          resolve(
+            buffers.map((b) => ({
+              name: b.name,
+              mime: b.mime,
+              data: b.parts.join(""),
+            })),
+          );
         } else {
           reject(new Error(response.error || "Failed to read files"));
         }

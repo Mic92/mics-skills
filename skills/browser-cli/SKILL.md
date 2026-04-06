@@ -45,7 +45,7 @@ await wait("gone", "Loading")        // text disappears
 
 // Other
 scroll("down")                       // also: up|top|bottom, or scroll(ref)
-await upload(3, "/path/to/file.pdf") // <input type=file>, ~1MB limit
+await upload(3, "/path/to/file.pdf") // <input type=file> (chunked, any size)
 await download(url, "file.pdf")      // -> ~/Downloads/
 await shot("/tmp/page.png")          // screenshot (omit path for data URL)
 read()                               // article text via Readability
