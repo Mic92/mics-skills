@@ -12,6 +12,14 @@ from datetime import datetime
 from pathlib import Path
 
 
+class BackendUnsuitable(Exception):
+    """Raised when a backend can't handle the requested mode by design.
+
+    Distinct from a runtime failure so the fallback loop can skip silently
+    instead of printing 'Warning: X failed' for an expected non-match.
+    """
+
+
 def run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
 
@@ -38,6 +46,34 @@ def capture_spectacle(mode: str, output: str, delay: int) -> None:
         # spectacle takes milliseconds, our API is seconds
         args.extend(["-d", str(delay * 1000)])
     run(args)
+
+
+def capture_niri(mode: str, output: str, delay: int) -> None:
+    if delay > 0:
+        time.sleep(delay)
+    # niri's IPC doesn't expose absolute window geometry for grim -g, but it
+    # has a native screenshot action that knows where its own windows are.
+    # The action is async (returns before the file lands, ~100-200ms on a
+    # warm compositor) so we poll for the file.
+    actions = {
+        "fullscreen": "screenshot-screen",
+        "window": "screenshot-window",
+    }
+    if mode not in actions:
+        # Region selection goes through niri's interactive UI which we can't
+        # drive headlessly. Let grim+slurp handle it via fallback.
+        raise BackendUnsuitable(f"niri backend does not support mode {mode!r}")
+    # niri claims to require absolute paths; in practice it resolves relative
+    # ones against the client's cwd, but pin it down anyway.
+    abs_output = str(Path(output).resolve())
+    Path(abs_output).unlink(missing_ok=True)
+    run(["niri", "msg", "action", actions[mode], "--path", abs_output])
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline:
+        if Path(abs_output).is_file():
+            return
+        time.sleep(0.02)
+    raise RuntimeError("niri screenshot action returned but file never appeared")
 
 
 def capture_grim(mode: str, output: str, delay: int) -> None:
@@ -83,6 +119,7 @@ def capture_grim(mode: str, output: str, delay: int) -> None:
 BACKENDS: dict[str, tuple[str, ...]] = {
     "macos": ("screencapture",),
     "spectacle": ("spectacle",),
+    "niri": ("niri",),
     "grim": ("grim",),
 }
 
@@ -102,8 +139,18 @@ def get_backends() -> list[str]:
         # non-KDE compositors it fails and prints a warning before grim runs.
         # Try the desktop's native tool first.
         desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
-        prefer = "spectacle" if "kde" in desktop else "grim"
+        if "kde" in desktop:
+            prefer = "spectacle"
+        elif "niri" in desktop or os.environ.get("NIRI_SOCKET"):
+            prefer = "niri"
+        else:
+            prefer = "grim"
         backends.sort(key=lambda b: b != prefer)
+        # niri only handles fullscreen+window; keep grim around for region
+        # but don't try niri at all on other desktops where the binary might
+        # be on PATH from the nix wrapper without a running compositor.
+        if prefer != "niri":
+            backends = [b for b in backends if b != "niri"]
         if not backends:
             print(
                 "Error: No screenshot backend found. Install spectacle (KDE) or grim (Wayland).",
@@ -134,6 +181,8 @@ def capture(backend: str, mode: str, output: str, delay: int, screen: int | None
         capture_macos(mode, output, delay, screen)
     elif backend == "spectacle":
         capture_spectacle(mode, output, delay)
+    elif backend == "niri":
+        capture_niri(mode, output, delay)
     elif backend == "grim":
         capture_grim(mode, output, delay)
     else:
@@ -156,7 +205,10 @@ def main() -> None:
     if not output:
         outdir = Path.home() / ".claude" / "outputs"
         outdir.mkdir(parents=True, exist_ok=True)
-        output = str(outdir / f"screenshot-{datetime.now().strftime('%Y%m%d-%H%M%S')}.png")
+        # Include microseconds: niri actions complete in ~150ms so two calls
+        # easily land in the same wall-clock second and clobber each other.
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        output = str(outdir / f"screenshot-{ts}.png")
     Path(output).parent.mkdir(parents=True, exist_ok=True)
 
     backends = get_backends()
@@ -169,7 +221,9 @@ def main() -> None:
             if Path(output).is_file():
                 print(output)
                 return
-        except Exception as e:
+        except BackendUnsuitable:
+            continue
+        except Exception as e:  # noqa: BLE001
             last_err = str(e)
             Path(output).unlink(missing_ok=True)
             print(f"Warning: {backend} failed, trying next backend...", file=sys.stderr)
