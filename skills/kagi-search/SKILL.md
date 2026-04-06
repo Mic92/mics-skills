@@ -18,5 +18,3 @@ kagi-search -l -n 10 "search query"
 # JSON output for parsing
 kagi-search -j "search query" | jq '.results[0].url'
 ```
-
-See [README.md](../../kagi-search/README.md) for setup and configuration.
