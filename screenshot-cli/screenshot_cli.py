@@ -35,7 +35,8 @@ def capture_spectacle(mode: str, output: str, delay: int) -> None:
     mode_flags = {"fullscreen": "-f", "window": "-a", "region": "-r"}
     args.append(mode_flags[mode])
     if delay > 0:
-        args.extend(["-d", str(delay)])
+        # spectacle takes milliseconds, our API is seconds
+        args.extend(["-d", str(delay * 1000)])
     run(args)
 
 
@@ -97,6 +98,12 @@ def get_backends() -> list[str]:
         backends = [name for name, cmds in BACKENDS.items() if all(shutil.which(c) for c in cmds)]
         # macos backend never applies on Linux
         backends = [b for b in backends if b != "macos"]
+        # The nix wrapper bundles spectacle so it's always on PATH, but on
+        # non-KDE compositors it fails and prints a warning before grim runs.
+        # Try the desktop's native tool first.
+        desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+        prefer = "spectacle" if "kde" in desktop else "grim"
+        backends.sort(key=lambda b: b != prefer)
         if not backends:
             print(
                 "Error: No screenshot backend found. Install spectacle (KDE) or grim (Wayland).",
@@ -106,6 +113,20 @@ def get_backends() -> list[str]:
         return backends
     print(f"Error: Unsupported platform: {system}", file=sys.stderr)
     sys.exit(1)
+
+
+def validate_args(*, mode: str, screen: int | None, backends: list[str]) -> None:
+    _ = mode
+    if screen is not None and "macos" not in backends:
+        # grim and spectacle don't take a monitor index; before this check
+        # the flag was silently dropped and you got all monitors stitched.
+        print(
+            "Error: -s/--screen is only supported on macOS "
+            "(grim/spectacle have no monitor-index flag). "
+            "Use -r to select a region instead.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 def capture(backend: str, mode: str, output: str, delay: int, screen: int | None) -> None:
@@ -138,8 +159,11 @@ def main() -> None:
         output = str(outdir / f"screenshot-{datetime.now().strftime('%Y%m%d-%H%M%S')}.png")
     Path(output).parent.mkdir(parents=True, exist_ok=True)
 
+    backends = get_backends()
+    validate_args(mode=mode, screen=args.screen, backends=backends)
+
     last_err = ""
-    for backend in get_backends():
+    for backend in backends:
         try:
             capture(backend, mode, output, args.delay, args.screen)
             if Path(output).is_file():

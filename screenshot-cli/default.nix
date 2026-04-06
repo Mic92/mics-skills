@@ -3,6 +3,7 @@
   buildPythonApplication,
   hatchling,
   makeWrapper,
+  pytestCheckHook,
   # Linux-only screenshot backends, null on non-Linux
   grim ? null,
   slurp ? null,
@@ -34,6 +35,8 @@ buildPythonApplication {
   pyproject = true;
 
   build-system = [ hatchling ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   nativeBuildInputs = [ makeWrapper ];
 
