@@ -45,5 +45,3 @@ Route from Los Angeles, CA, USA to San Francisco, CA, USA
 Distance: 382 mi
 Duration: 5 hours 48 mins
 ```
-
-See [README.md](../../gmaps-cli/README.md) for setup and full documentation.
