@@ -1,24 +1,18 @@
 ---
 name: context7-cli
-description: Fetch up-to-date library documentation from Context7. Use for getting code examples and API docs for any library.
+description: Fetch up-to-date library documentation and code examples from Context7. Use for getting current API docs and snippets for any library or framework.
 ---
 
-# Usage
+Two-step: `search` resolves a library name to a Context7 ID, then `docs` fetches a few focused snippets for that ID. IDs are not guessable — always search first. Both args are required for both commands.
 
 ```bash
-# Search for libraries
-context7-cli search react "how to use hooks"
+# 1. Find the library ID — output shows IDs, ⭐, snippet count, and available versions
+context7-cli search nextjs "middleware"
+#   /vercel/next.js   ⭐ 131k   Versions: v15.1.8, v13.5.11, ...
 
-# Get documentation (use library ID from search)
-context7-cli docs /vercel/next.js "middleware authentication"
+# 2. Fetch docs — query is semantic, be specific (output is ~5KB, don't waste it on broad topics)
+context7-cli docs /vercel/next.js "middleware matcher config"
 
-# With specific version
-context7-cli docs /vercel/next.js/v14.3.0 "app router"
-
-# JSON output
-context7-cli search --json react "hooks" | jq '.results[0].id'
-context7-cli docs --json /vercel/next.js "routing"
-
-# With explicit API key
-context7-cli -k "ctx7sk_xxx" search react "hooks"
+# Pin version (only ones listed in search output work)
+context7-cli docs /vercel/next.js/v15.1.8 "app router migration"
 ```

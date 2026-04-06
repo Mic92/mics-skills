@@ -101,7 +101,11 @@
                 ];
               };
               "context7-cli" = { };
-              "screenshot-cli" = { };
+              "screenshot-cli" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  pytest
+                ];
+              };
               "tasker-cli" = {
                 extraPythonPackages = with pkgs.python3.pkgs; [
                   pytest

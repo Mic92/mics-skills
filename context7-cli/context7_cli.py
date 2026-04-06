@@ -34,7 +34,7 @@ Examples:
     context7-cli search react "how to use hooks"
     context7-cli search --json nextjs "middleware"
     context7-cli docs /facebook/react "useState examples"
-    context7-cli docs /vercel/next.js/v14.3.0 "middleware authentication"
+    context7-cli docs /vercel/next.js/v15.1.8 "middleware authentication"
     context7-cli -k ctx7sk_xxx docs /vercel/next.js "routing"
 """
 
@@ -279,11 +279,11 @@ def get_documentation(library_id: str, query: str, output_format: str = "txt") -
             return content
     except urllib.error.HTTPError as e:
         error_body = e.read()
-        return f"Error: {parse_error_response(error_body, e.code)}"
+        die(parse_error_response(error_body, e.code))
     except urllib.error.URLError as e:
-        return f"Error: Network error: {e.reason}"
+        die(f"Network error: {e.reason}")
     except TimeoutError:
-        return "Error: Request timed out"
+        die("Request timed out")
 
 
 def format_search_results(response: SearchResponse, as_json: bool = False) -> str:
@@ -298,7 +298,7 @@ def format_search_results(response: SearchResponse, as_json: bool = False) -> st
         )
 
     if response.error:
-        return f"Error: {response.error}"
+        die(response.error)
 
     if not response.results:
         return "No libraries found matching your query."
@@ -306,19 +306,25 @@ def format_search_results(response: SearchResponse, as_json: bool = False) -> st
     lines = [f"Found {len(response.results)} libraries:\n"]
 
     for r in response.results:
-        stars = f"⭐ {r.stars:,}" if r.stars else ""
+        # API returns -1 for unknown stars; hide negatives so '⭐ -1' isn't
+        # misread as a low rating
+        stars = f"⭐ {r.stars:,}" if r.stars and r.stars > 0 else ""
+        trust = f"trust {r.trust_score}/10" if r.trust_score else ""
         snippets = f"{r.total_snippets} snippets" if r.total_snippets else ""
         tokens = f"{r.total_tokens:,} tokens" if r.total_tokens else ""
 
         lines.append(f"  {r.id}")
         lines.append(f"    {r.title}: {r.description}")
 
-        meta = [s for s in [stars, snippets, tokens] if s]
+        meta = [s for s in [stars, trust, snippets, tokens] if s]
         if meta:
             lines.append(f"    {' | '.join(meta)}")
 
         if r.versions:
-            lines.append(f"    Versions: {', '.join(r.versions[:5])}")
+            shown = r.versions[:5]
+            extra = len(r.versions) - len(shown)
+            tail = f" (+{extra} more)" if extra > 0 else ""
+            lines.append(f"    Versions: {', '.join(shown)}{tail}")
 
         lines.append("")
 
@@ -332,9 +338,20 @@ def print_usage() -> NoReturn:
 
 
 def print_error(msg: str) -> NoReturn:
-    """Print error message and exit."""
+    """Print usage error and exit."""
     print(f"Error: {msg}", file=sys.stderr)
     print("Run 'context7-cli --help' for usage.", file=sys.stderr)
+    sys.exit(1)
+
+
+def die(msg: str) -> NoReturn:
+    """Print runtime error to stderr and exit non-zero.
+
+    Separate from print_error so API failures don't get a confusing
+    'run --help' suggestion. Non-zero exit lets callers detect failure
+    without grepping stdout for 'Error:'.
+    """
+    print(f"Error: {msg}", file=sys.stderr)
     sys.exit(1)
 
 
