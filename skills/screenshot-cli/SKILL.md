@@ -1,24 +1,16 @@
 ---
 name: screenshot-cli
-description: "Capture full-screen, window, or region screenshots. Use when needing to see the screen or debug UI and graphical issues."
+description: Take screenshots non-interactively. Use to see the screen, debug UI, or capture a specific region by coordinates.
 ---
 
-# Usage
+Prints output path on stdout. Default: `~/.claude/outputs/screenshot-TIMESTAMP.png`. View with the `read` tool.
 
 ```bash
-screenshot-cli                    # Fullscreen (default)
-screenshot-cli -w                 # Focused window
-screenshot-cli -r                 # Interactive region selection
-screenshot-cli -d 3               # Delay 3s before capture
-screenshot-cli /tmp/shot.png      # Custom output path
-screenshot-cli -s 1               # Specific monitor (macOS only)
+screenshot-cli                      # Full screen (default)
+screenshot-cli -w                   # Focused window (Linux only)
+screenshot-cli -g "100,50 800x600"  # Region by logical coords 'X,Y WxH'
+screenshot-cli -d 3                 # Delay 3s before capture
+screenshot-cli /tmp/shot.png        # Custom output path
 ```
 
-Prints the output file path on stdout. Default: `~/.claude/outputs/screenshot-TIMESTAMP.png`
-
-View the result with the `read` tool:
-
-```bash
-path=$(screenshot-cli)
-# read "$path"
-```
+`-g` coords are **logical** (pre-scale): on a 1.5× display, `0,0 100x100` yields a 150×150 PNG. If reading pixel offsets from a previous screenshot, divide by your scale factor.

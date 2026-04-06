@@ -6,7 +6,6 @@
   pytestCheckHook,
   # Linux-only screenshot backends, null on non-Linux
   grim ? null,
-  slurp ? null,
   spectacle ? null,
   sway ? null,
   jq,
@@ -18,8 +17,10 @@ let
   runtimeDeps = lib.optionals isLinux (
     lib.filter (p: p != null) [
       grim
-      slurp
       spectacle
+      # sway gives us swaymsg for window-geometry queries on sway sessions;
+      # niri uses its own IPC and isn't bundled because it's the running
+      # compositor.
       sway
       jq
     ]

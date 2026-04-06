@@ -44,3 +44,21 @@ def test_screen_flag_accepted_with_macos_backend() -> None:
 
 def test_screen_flag_unset_is_always_fine() -> None:
     sc.validate_args(mode="fullscreen", screen=None, backends=["grim"])
+
+
+def test_macos_window_mode_refuses_with_hint() -> None:
+    # screencapture -w blocks on a mouse click; macOS has no fallback
+    # backend so this must fail loudly rather than hang or silently skip.
+    with pytest.raises(SystemExit, match="-g"):
+        sc.capture_macos("window", "/tmp/x.png", delay=0, screen=None)
+
+
+def test_geometry_parse_grim_format() -> None:
+    # Same format grim -g consumes, so the string passes straight through
+    # on Linux without translation.
+    assert sc.parse_geometry("10,20 300x400") == (10, 20, 300, 400)
+
+
+def test_geometry_parse_rejects_garbage() -> None:
+    with pytest.raises(SystemExit):
+        sc.parse_geometry("10,20,300,400")
