@@ -3,7 +3,7 @@ name: db-cli
 description: Search Deutsche Bahn train connections. Use for train routes, schedules, and travel times in Germany.
 ---
 
-Station names are fuzzy-matched. No API key needed.
+Station names are fuzzy-matched.
 
 ```bash
 db-cli "Berlin Hbf" "München Hbf"                  # depart now
