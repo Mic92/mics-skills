@@ -81,7 +81,11 @@ function connectNativeHost() {
 
     nativePort.onMessage.addListener(async (msg) => {
       const message = /** @type {NativeMessage} */ (msg);
-      console.log("Received from native host:", message);
+      // Chunks can be 700KB each; logging them floods devtools and
+      // pins memory until the console is cleared.
+      if (!message.chunk) {
+        console.log("Received from native host:", message);
+      }
 
       if (message.ready && message.socket_path) {
         console.log(
@@ -200,13 +204,33 @@ async function sendToContentScript(command, params = {}, targetTabId) {
 // Browser-level commands (require background script)
 // ============================================================================
 
+/** URL schemes that content scripts cannot be injected into.
+ *  executeScript() throws "Missing host permission" on these even with
+ *  <all_urls> — they're hard-excluded by the WebExtension security model. */
+const PRIVILEGED_URL_PREFIXES = [
+  "about:",
+  "moz-extension:",
+  "chrome:",
+  "resource:",
+  "javascript:",
+  "data:",
+  "view-source:",
+];
+
 /**
  * Navigate a managed tab to a new URL and wait for load
  * @param {string} url - URL to navigate to
  * @param {string} [tabId] - Tab ID (defaults to active tab)
- * @returns {Promise<{url: string}>}
+ * @returns {Promise<{url: string, tabId: string}>}
  */
 async function navigate(url, tabId) {
+  const blocked = PRIVILEGED_URL_PREFIXES.find((p) => url.startsWith(p));
+  if (blocked) {
+    throw new Error(
+      `Cannot inject into ${blocked} URLs (browser security policy). Use http(s):// or file://`,
+    );
+  }
+
   let targetId = tabId;
   if (!targetId) {
     // Validate activeTabId before using it — it can go stale.
@@ -263,7 +287,9 @@ async function navigate(url, tabId) {
   // Re-inject content script
   await enableOnTab(browserTabId, targetId);
 
-  return { url };
+  // Always include tabId so the CLI can print it even on the
+  // existing-tab path (TAB=$(browser-cli --go ...) must always work).
+  return { url, tabId: targetId };
 }
 
 /**
@@ -474,7 +500,6 @@ async function listTabs() {
 async function createNewTab(url) {
   const shortId = generateTabId();
   const tabUrl = url || "about:blank";
-
   const tab = await browser.tabs.create({ url: tabUrl, active: true });
 
   if (tab.id === undefined) {

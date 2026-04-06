@@ -6,9 +6,10 @@ description: Control Firefox browser from the command line. Use for web automati
 # Usage
 
 ```bash
-browser-cli --list                       # List managed tabs
-browser-cli --go "https://example.com"   # Open page, prints tab ID (e.g. abc123)
-browser-cli abc123 <<< 'snap()'          # Execute JS in that tab
+TAB=$(browser-cli --go "https://example.com")  # tab ID on stdout
+browser-cli $TAB <<< 'snap()'                  # execute JS in that tab
+browser-cli --list                             # TSV: id⇥*⇥url⇥title
+browser-cli --list --json                      # machine-readable
 ```
 
 # JavaScript API
@@ -69,11 +70,11 @@ markdown without a browser tab — prefer for public static articles/docs.
 # Example: Login Flow
 
 ```bash
-browser-cli --go "https://example.com/login"   # -> tab h9Jk3b
-browser-cli h9Jk3b <<< 'snap()'
+TAB=$(browser-cli --go "https://example.com/login")
+browser-cli $TAB <<< 'snap()'
 # [1] input "Email"  [2] input "Password"  [3] button "Sign In"
 
-browser-cli h9Jk3b <<'EOF'
+browser-cli $TAB <<'EOF'
 await type(1, "user@test.com")
 await type(2, "secret123")
 await click(3)
