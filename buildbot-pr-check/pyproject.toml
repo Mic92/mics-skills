@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "buildbot-pr-check"
+version = "0.2.0"
+description = "Inspect Buildbot (buildbot-nix) CI for a PR: find/watch builds, list failed sub-builds, fetch log tails"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+buildbot-pr-check = "buildbot_pr_check.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["buildbot_pr_check"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unused_configs = true

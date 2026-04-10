@@ -1,0 +1,28 @@
+{
+  "builds": [
+    {
+      "builderid": 111,
+      "buildid": 104417,
+      "buildrequestid": 103834,
+      "complete": true,
+      "complete_at": 1775825398,
+      "locks_duration_s": 0,
+      "masterid": 1,
+      "number": 2499,
+      "properties": {
+        "attr": ["x86_64-linux.nixos-jamie", "nix-eval-nix"],
+        "virtual_builder_name": [
+          "github:TUM-DSE/doctor-cluster-config#checks.x86_64-linux.nixos-jamie",
+          "nix-eval-nix"
+        ]
+      },
+      "results": 2,
+      "started_at": 1775820295,
+      "state_string": "'nix build ...' (failure)",
+      "workerid": 118
+    }
+  ],
+  "meta": {
+    "total": 1
+  }
+}

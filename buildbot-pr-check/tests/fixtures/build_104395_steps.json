@@ -1,0 +1,244 @@
+{
+  "meta": {
+    "total": 8
+  },
+  "steps": [
+    {
+      "buildid": 104395,
+      "complete": true,
+      "complete_at": 1775820012,
+      "hidden": false,
+      "locks_acquired_at": 1775820009,
+      "name": "worker_preparation",
+      "number": 0,
+      "results": 0,
+      "started_at": 1775820009,
+      "state_string": "worker graham-046 ready",
+      "stepid": 525414,
+      "urls": []
+    },
+    {
+      "buildid": 104395,
+      "complete": true,
+      "complete_at": 1775820019,
+      "hidden": false,
+      "locks_acquired_at": 1775820012,
+      "name": "git",
+      "number": 1,
+      "results": 0,
+      "started_at": 1775820012,
+      "state_string": "update",
+      "stepid": 525415,
+      "urls": []
+    },
+    {
+      "buildid": 104395,
+      "complete": true,
+      "complete_at": 1775820289,
+      "hidden": false,
+      "locks_acquired_at": 1775820019,
+      "name": "Evaluate flake",
+      "number": 2,
+      "results": 1,
+      "started_at": 1775820019,
+      "state_string": "'nix-eval-jobs --option ...' (warnings)",
+      "stepid": 525416,
+      "urls": []
+    },
+    {
+      "buildid": 104395,
+      "complete": true,
+      "complete_at": 1775825411,
+      "hidden": false,
+      "locks_acquired_at": 1775820289,
+      "name": "build flake",
+      "number": 3,
+      "results": 2,
+      "started_at": 1775820289,
+      "state_string": "(30 successes, 1 failure, 6 skipped)",
+      "stepid": 525419,
+      "urls": [
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103813",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103813"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103814",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103814"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103815",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103815"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103816",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103816"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103817",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103817"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103818",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103818"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103819",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103819"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103820",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103820"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103821",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103821"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103822",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103822"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103823",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103823"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103824",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103824"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103825",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103825"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103826",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103826"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103827",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103827"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103828",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103828"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103829",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103829"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103830",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103830"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103831",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103831"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103832",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103832"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103833",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103833"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103834",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103834"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103835",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103835"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103836",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103836"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103837",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103837"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103838",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103838"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103839",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103839"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103840",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103840"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103841",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103841"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103842",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103842"
+        },
+        {
+          "name": "TUM-DSE-doctor-cluster-config-nix-build #103843",
+          "url": "https://buildbot.dse.in.tum.de/#/buildrequests/103843"
+        }
+      ]
+    },
+    {
+      "buildid": 104395,
+      "complete": true,
+      "complete_at": 1775825411,
+      "hidden": true,
+      "locks_acquired_at": null,
+      "name": "Process skipped builds",
+      "number": 4,
+      "results": 3,
+      "started_at": 1775825411,
+      "state_string": "finished (skipped)",
+      "stepid": 525611,
+      "urls": []
+    },
+    {
+      "buildid": 104395,
+      "complete": true,
+      "complete_at": 1775825411,
+      "hidden": false,
+      "locks_acquired_at": 1775825411,
+      "name": "Cleanup drv paths",
+      "number": 5,
+      "results": 0,
+      "started_at": 1775825411,
+      "state_string": "'rm -rf ...'",
+      "stepid": 525612,
+      "urls": []
+    },
+    {
+      "buildid": 104395,
+      "complete": true,
+      "complete_at": 1775825411,
+      "hidden": false,
+      "locks_acquired_at": null,
+      "name": "Evaluate effects",
+      "number": 6,
+      "results": 3,
+      "started_at": 1775825411,
+      "state_string": "'buildbot-effects list ...' (skipped)",
+      "stepid": 525613,
+      "urls": []
+    },
+    {
+      "buildid": 104395,
+      "complete": true,
+      "complete_at": 1775825411,
+      "hidden": true,
+      "locks_acquired_at": null,
+      "name": "Evaluate scheduled effects",
+      "number": 7,
+      "results": 3,
+      "started_at": 1775825411,
+      "state_string": "'buildbot-effects list-schedules ...' (skipped)",
+      "stepid": 525614,
+      "urls": []
+    }
+  ]
+}
