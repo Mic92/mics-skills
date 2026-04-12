@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "total": 2
+  },
+  "steps": [
+    {
+      "buildid": 104417,
+      "complete": true,
+      "complete_at": 1775820296,
+      "hidden": false,
+      "locks_acquired_at": 1775820295,
+      "name": "worker_preparation",
+      "number": 0,
+      "results": 0,
+      "started_at": 1775820295,
+      "state_string": "worker graham-034 ready",
+      "stepid": 525456,
+      "urls": []
+    },
+    {
+      "buildid": 104417,
+      "complete": true,
+      "complete_at": 1775825398,
+      "hidden": false,
+      "locks_acquired_at": 1775820296,
+      "name": "Build flake attr",
+      "number": 1,
+      "results": 2,
+      "started_at": 1775820296,
+      "state_string": "'nix build ...' (failure)",
+      "stepid": 525471,
+      "urls": []
+    }
+  ]
+}

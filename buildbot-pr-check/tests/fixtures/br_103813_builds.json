@@ -1,0 +1,28 @@
+{
+  "builds": [
+    {
+      "builderid": 130,
+      "buildid": 104396,
+      "buildrequestid": 103813,
+      "complete": true,
+      "complete_at": 1775820407,
+      "locks_duration_s": 0,
+      "masterid": 1,
+      "number": 2116,
+      "properties": {
+        "attr": ["x86_64-linux.nixos-eliza", "nix-eval-nix"],
+        "virtual_builder_name": [
+          "github:TUM-DSE/doctor-cluster-config#checks.x86_64-linux.nixos-eliza",
+          "nix-eval-nix"
+        ]
+      },
+      "results": 0,
+      "started_at": 1775820291,
+      "state_string": "build successful",
+      "workerid": 9
+    }
+  ],
+  "meta": {
+    "total": 1
+  }
+}

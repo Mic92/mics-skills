@@ -39,6 +39,7 @@
 
           packages = {
             browser-cli = pkgs.python3.pkgs.callPackage ./browser-cli { };
+            buildbot-pr-check = pkgs.python3.pkgs.callPackage ./buildbot-pr-check { };
             browser-cli-extension = (pkgs.callPackages ./firefox-extensions { }).browser-cli-extension;
             calendar-cli = pkgs.callPackage ./calendar-cli {
               inherit (pkgs) python3 vdirsyncer msmtp;
@@ -91,6 +92,11 @@
                 ];
               };
               "gmaps-cli" = {
+                extraPythonPackages = with pkgs.python3.pkgs; [
+                  pytest
+                ];
+              };
+              "buildbot-pr-check" = {
                 extraPythonPackages = with pkgs.python3.pkgs; [
                   pytest
                 ];

@@ -9,6 +9,7 @@ let
   # Each skill maps to a package name and a skills/ subdirectory.
   allSkills = [
     "browser-cli"
+    "buildbot-pr-check"
     "calendar-cli"
     "context7-cli"
     "db-cli"
