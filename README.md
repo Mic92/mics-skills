@@ -91,6 +91,25 @@ programs.mics-skills = {
 
 Only the selected CLI tools and their skill definitions will be installed.
 
+### Per-skill modules
+
+Each skill is also available as an individual Home Manager module. Importing a
+module installs its CLI tool and skill definition — no extra options needed:
+
+```nix
+# home-manager configuration
+{ inputs, ... }:
+{
+  imports = [
+    inputs.mics-skills.homeModules.kagi-search
+    inputs.mics-skills.homeModules.pexpect-cli
+    inputs.mics-skills.homeModules.screenshot-cli
+  ];
+}
+```
+
+> Run `nix flake show github:mic92/mics-skills` to see all available `homeModules`.
+
 ## Development
 
 ```bash

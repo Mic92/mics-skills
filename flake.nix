@@ -19,6 +19,7 @@
 
       imports = [
         inputs.treefmt-nix.flakeModule
+        ./home-manager-new.nix
       ];
 
       flake.homeManagerModules.default = import ./home-manager.nix;
