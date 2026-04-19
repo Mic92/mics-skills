@@ -2,7 +2,7 @@
 #
 # Each entry describes one home-manager-installable skill. Both
 # `home-manager.nix` (the legacy `programs.mics-skills` option module) and
-# `home-manager-new.nix` (per-skill `flake.homeModules.<name>`) consume this so
+# `home-modules.nix` (per-skill `flake.homeModules.<name>`) consume this so
 # adding a skill means touching exactly one place.
 #
 # The skill definition itself (SKILL.md and friends) ships inside the package
