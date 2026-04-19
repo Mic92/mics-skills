@@ -38,6 +38,4 @@ let
       ];
     };
 in
-{
-  flake.homeModules = builtins.mapAttrs mkSkillModule registry;
-}
+builtins.mapAttrs mkSkillModule registry
