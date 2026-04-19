@@ -18,6 +18,8 @@ buildPythonApplication {
   nativeBuildInputs = [ makeWrapper ];
 
   postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/tasker-cli
     wrapProgram $out/bin/tasker-cli \
       --prefix PATH : ${lib.makeBinPath [ android-tools ]}
   '';

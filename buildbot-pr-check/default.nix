@@ -20,6 +20,11 @@ buildPythonApplication {
 
   nativeCheckInputs = [ pytestCheckHook ];
 
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/buildbot-pr-check
+  '';
+
   pythonImportsCheck = [ "buildbot_pr_check" ];
 
   meta = {

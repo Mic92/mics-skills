@@ -17,6 +17,11 @@ buildPythonApplication {
 
   dependencies = [ beautifulsoup4 ];
 
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/kagi-search
+  '';
+
   meta = {
     description = "CLI tool for searching Kagi using session tokens";
     mainProgram = "kagi-search";

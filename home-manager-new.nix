@@ -1,48 +1,43 @@
-{ self, ... }:
+{ self, lib, ... }:
 let
-  mkSkillModule =
-    name:
-    {
-      packages ? null,
-      extra ? { },
-      ...
-    }:
-    { pkgs, ... }:
+  registry = import ./skills.nix;
+
+  # Base module for one package: installs the CLI and symlinks its skill dir
+  # into every configured agent skills directory. Carries a stable `key` so the
+  # module system deduplicates it when imported multiple times (e.g. directly
+  # *and* via a variant like `browser-cli-with-extension`).
+  mkBaseModule =
+    pkgName:
+    { pkgs, config, ... }:
     let
-      system = pkgs.stdenv.hostPlatform.system;
-      packageNames = if packages != null then packages else [ name ];
+      pkg = self.packages.${pkgs.stdenv.hostPlatform.system}.${pkgName};
+      skillDir = "${pkg}/share/skills/${pkgName}";
     in
     {
-      home.packages = map (p: self.packages.${system}.${p}) packageNames;
-      home.file.".claude/skills/${name}".source = "${self}/skills/${name}";
-      home.file.".opencode/skills/${name}".source = "${self}/skills/${name}";
-      imports = [ extra ];
+      key = "mics-skills/base/${pkgName}";
+      home.packages = [ pkg ];
+      home.file = lib.listToAttrs (
+        map (
+          dir: lib.nameValuePair "${dir}/${pkgName}" { source = skillDir; }
+        ) config.programs.mics-skills.skillDirs
+      );
     };
 
+  mkSkillModule =
+    name: def:
+    let
+      pkgName = def.package or name;
+      extra = def.extra or (_: { });
+    in
+    {
+      key = "mics-skills/${name}";
+      imports = [
+        ./home-manager-common.nix
+        (mkBaseModule pkgName)
+        (extra { inherit self; })
+      ];
+    };
 in
 {
-
-  flake.homeModules = builtins.mapAttrs mkSkillModule {
-    "browser-cli" = { };
-    "browser-cli-with-extension" = {
-      packages = [ "browser-cli" ];
-      extra =
-        { system, ... }:
-        {
-          programs.firefox.profiles.default.extensions.packages =
-            self.packages.${system}.browser-cli-extension;
-        };
-    };
-    "buildbot-pr-check" = { };
-    "calendar-cli" = { };
-    "context7-cli" = { };
-    "db-cli" = { };
-    "gmaps-cli" = { };
-    "kagi-search" = { };
-    "n8n-cli" = { };
-    "pexpect-cli" = { };
-    "screenshot-cli" = { };
-    "tasker-cli" = { };
-    "weather-cli" = { };
-  };
+  flake.homeModules = builtins.mapAttrs mkSkillModule registry;
 }

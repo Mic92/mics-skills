@@ -41,7 +41,11 @@ buildPythonApplication {
 
   nativeBuildInputs = [ makeWrapper ];
 
-  postInstall = lib.optionalString (runtimeDeps != [ ]) ''
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/screenshot-cli
+  ''
+  + lib.optionalString (runtimeDeps != [ ]) ''
     wrapProgram $out/bin/screenshot-cli \
       --prefix PATH : ${lib.makeBinPath runtimeDeps}
   '';

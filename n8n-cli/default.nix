@@ -19,6 +19,11 @@ buildPythonApplication {
 
   nativeCheckInputs = [ pytestCheckHook ];
 
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/n8n-cli
+  '';
+
   meta = {
     description = "Python CLI for n8n API: credentials, workflow JSON, execution data";
     mainProgram = "n8n-cli";
