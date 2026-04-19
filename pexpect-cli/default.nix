@@ -24,6 +24,11 @@ python3.pkgs.buildPythonApplication {
   # Add pueue to PATH for both runtime and tests
   makeWrapperArgs = [ "--prefix PATH : ${pueue}/bin" ];
 
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/pexpect-cli
+  '';
+
   # Patch shebangs in bin/ directory for tests
   postPatch = ''
     patchShebangs bin/

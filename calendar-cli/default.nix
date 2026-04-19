@@ -30,6 +30,11 @@ python3.pkgs.buildPythonApplication {
       "--suffix PATH : ${lib.makeBinPath bins}"
     ];
 
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/calendar-cli
+  '';
+
   nativeCheckInputs = with python3.pkgs; [
     pytestCheckHook
     pytest-xdist

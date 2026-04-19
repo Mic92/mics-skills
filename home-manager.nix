@@ -6,23 +6,18 @@
 let
   cfg = config.programs.mics-skills;
 
-  # Each skill maps to a package name and a skills/ subdirectory.
-  allSkills = [
-    "browser-cli"
-    "buildbot-pr-check"
-    "calendar-cli"
-    "context7-cli"
-    "db-cli"
-    "gmaps-cli"
-    "kagi-search"
-    "n8n-cli"
-    "pexpect-cli"
-    "screenshot-cli"
-    "tasker-cli"
-    "weather-cli"
-  ];
+  registry = import ./skills.nix;
+
+  # The legacy option module only exposes the "canonical" skills: entries that
+  # map 1:1 onto a package of the same name (i.e. no packaging variants like
+  # `browser-cli-with-extension`).
+  allSkills = builtins.filter (name: (registry.${name}.package or name) == name) (
+    builtins.attrNames registry
+  );
 in
 {
+  imports = [ ./home-manager-common.nix ];
+
   options.programs.mics-skills = {
     enable = lib.mkEnableOption "mics-skills LLM agent tools";
 
@@ -31,8 +26,8 @@ in
       default = allSkills;
       description = ''
         Which skills to install. Each entry installs the CLI tool into
-        `home.packages` and the corresponding skill definition into
-        `~/.claude/skills/<name>/`.
+        `home.packages` and the corresponding skill definition into every
+        directory listed in `programs.mics-skills.skillDirs`.
 
         Defaults to all available skills.
       '';
@@ -52,23 +47,32 @@ in
     };
 
     skillsSrc = lib.mkOption {
-      type = lib.types.path;
+      type = lib.types.nullOr lib.types.path;
+      default = null;
       description = ''
-        Path to the mics-skills source tree. Used to locate the `skills/`
-        directory. Typically `inputs.mics-skills` (the flake source).
+        Deprecated. Skill definitions now ship inside the packages at
+        `$out/share/skills/<name>/`; this option is ignored.
       '';
     };
   };
 
   config = lib.mkIf cfg.enable {
+    warnings =
+      lib.optional (cfg.skillsSrc != null)
+        "programs.mics-skills.skillsSrc is deprecated and ignored; skill files now ship inside the packages.";
+
     home.packages = map (name: cfg.package.${name}) cfg.skills;
 
-    # Symlink only the selected skill directories.
+    # Symlink the skill directory shipped inside each package into every
+    # configured agent skills directory.
     home.file = lib.listToAttrs (
-      map (name: {
-        name = ".claude/skills/${name}";
-        value.source = "${cfg.skillsSrc}/skills/${name}";
-      }) cfg.skills
+      lib.concatMap (
+        name:
+        map (dir: {
+          name = "${dir}/${name}";
+          value.source = "${cfg.package.${name}}/share/skills/${name}";
+        }) cfg.skillDirs
+      ) cfg.skills
     );
   };
 }

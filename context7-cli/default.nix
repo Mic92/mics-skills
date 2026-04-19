@@ -16,6 +16,11 @@ buildPythonApplication {
 
   dependencies = [ ];
 
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/context7-cli
+  '';
+
   meta = {
     description = "CLI for Context7 library documentation API";
     mainProgram = "context7-cli";

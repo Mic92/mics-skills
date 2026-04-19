@@ -23,6 +23,11 @@ buildNpmPackage {
   # The install phase will handle creating the wrapper script
   dontNpmBuild = true;
 
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${src}/skill $out/share/skills/db-cli
+  '';
+
   meta = with lib; {
     description = "CLI tool for searching Deutsche Bahn train connections";
     homepage = "https://github.com/Mic92/dotfiles";

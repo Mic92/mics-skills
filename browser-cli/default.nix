@@ -18,6 +18,11 @@ buildPythonApplication {
 
   dependencies = [ websockets ];
 
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -r ${./skill} $out/share/skills/browser-cli
+  '';
+
   postFixup = ''
     wrapProgram $out/bin/browser-cli \
       --prefix PATH : ${browsh}/bin
