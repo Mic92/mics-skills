@@ -119,6 +119,23 @@ module installs its CLI tool and skill definition — no extra options needed:
 > List available modules with
 > `nix eval github:Mic92/mics-skills#homeModules --apply builtins.attrNames`.
 
+### Without home-manager
+
+Every package installs its skill definition to `$out/share/skills/<name>/`, so
+you can wire it up yourself from plain NixOS.
+
+Here an example to using `symlinkJoin`:
+
+```nix
+let
+  skills = pkgs.symlinkJoin {
+    name = "mics-skills";
+    paths = [ sk.kagi-search sk.pexpect-cli sk.screenshot-cli ];
+  };
+in
+# ${skills}/share/skills/ now contains kagi-search/, pexpect-cli/, screenshot-cli/
+```
+
 ## Development
 
 ```bash
