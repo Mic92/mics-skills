@@ -1,6 +1,6 @@
 ---
 name: context7-cli
-description: Fetch up-to-date library documentation and code examples from Context7. Use for getting current API docs and snippets for any library or framework.
+description: Current API docs + code snippets for third-party libraries/frameworks. Use to verify exact signatures/usage.
 ---
 
 Two-step: `search` resolves a library name to a Context7 ID, then `docs` fetches a few focused snippets for that ID. IDs are not guessable — always search first. Both args are required for both commands.
