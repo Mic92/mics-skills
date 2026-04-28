@@ -53,13 +53,5 @@
       homeModules = import ./nix/home-modules.nix { inherit self lib; } // {
         default = import ./nix/home-manager.nix;
       };
-
-      homeManagerModules = {
-        default = throw ''
-          mics-skills: `homeManagerModules` has been removed.
-          Use `homeModules.default` (legacy programs.mics-skills option module)
-          or the per-skill modules `homeModules.<skill>` instead.
-        '';
-      };
     };
 }
