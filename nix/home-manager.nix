@@ -32,7 +32,7 @@ in
         Defaults to all available skills.
       '';
       example = [
-        "kagi-search"
+        "kagi"
         "screenshot-cli"
         "pexpect-cli"
       ];

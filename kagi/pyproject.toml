@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "kagi-search"
-version = "0.1.0"
-description = "Python script for Kagi search using session tokens"
+name = "kagi"
+version = "0.2.0"
+description = "Multi-verb CLI for Kagi (search + summarize)"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
@@ -13,10 +13,12 @@ dependencies = [
 ]
 
 [project.scripts]
-kagi-search = "kagi_search:main"
+kagi = "kagi.cli:main"
+# Backward-compat alias for the old `kagi-search` binary.
+kagi-search = "kagi.cli:search_entry"
 
 [tool.hatch.build.targets.wheel]
-packages = ["kagi_search.py"]
+packages = ["kagi"]
 
 [tool.ruff]
 line-length = 100

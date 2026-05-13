@@ -6,8 +6,8 @@
 }:
 
 buildPythonApplication {
-  pname = "kagi-search";
-  version = "0.1.0";
+  pname = "kagi";
+  version = "0.2.0";
 
   src = ./.;
 
@@ -19,12 +19,14 @@ buildPythonApplication {
 
   postInstall = ''
     mkdir -p $out/share/skills
-    cp -r ${./skill} $out/share/skills/kagi-search
+    cp -r ${./skill} $out/share/skills/kagi
+    # Backward-compat: pre-verbs skill name. Symlink, not a copy.
+    ln -s kagi $out/share/skills/kagi-search
   '';
 
   meta = {
-    description = "CLI tool for searching Kagi using session tokens";
-    mainProgram = "kagi-search";
+    description = "CLI tool for Kagi (search + summarize) using session tokens";
+    mainProgram = "kagi";
     license = lib.licenses.mit;
     maintainers = [ ];
   };

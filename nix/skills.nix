@@ -33,6 +33,9 @@
   context7-cli = { };
   db-cli = { };
   gmaps-cli = { };
+  kagi = { };
+  # Backward-compat: `kagi` was named `kagi-search` before the verbs refactor.
+  # Same package; SKILL.md path in the package output is a symlink (see kagi/default.nix).
   kagi-search = { };
   n8n-cli = { };
   pexpect-cli = { };
