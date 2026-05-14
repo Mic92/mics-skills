@@ -14,8 +14,8 @@ dependencies = [
 
 [project.scripts]
 kagi = "kagi.cli:main"
-# Backward-compat alias for the old `kagi-search` binary.
 kagi-search = "kagi.cli:search_entry"
+kagi-summarize = "kagi.cli:summarize_entry"
 
 [tool.hatch.build.targets.wheel]
 packages = ["kagi"]

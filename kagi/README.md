@@ -1,13 +1,12 @@
 # kagi
 
-Multi-verb CLI for Kagi. Authenticates via session token (no API credits used)
-and exposes:
+Multi-verb CLI for Kagi. Authenticates via session token (no API credits used):
 
 - `kagi search QUERY` — search the web; returns Quick Answer summaries + result links
-- `kagi summarize URL` — summarize a known URL via Kagi's Universal Summarizer (added in a follow-up commit)
+- `kagi summarize URL` — summarize a known URL via Kagi's Universal Summarizer
 
-The `kagi-search` binary remains as a backward-compat alias for `kagi search`
-(via Python `console_scripts`).
+The `kagi-search` and `kagi-summarize` binary names remain as backward-compat
+aliases (via Python `console_scripts`).
 
 ## Configuration
 

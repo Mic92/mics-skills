@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import search
+from . import search, summarize
 from ._auth import KagiError
 
 
@@ -23,6 +23,9 @@ def _build_parser() -> argparse.ArgumentParser:
     search.add_arguments(
         subparsers.add_parser("search", help="search the web via Kagi"),
     )
+    summarize.add_arguments(
+        subparsers.add_parser("summarize", help="summarize a URL via Kagi"),
+    )
     return parser
 
 
@@ -33,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.verb == "search":
             return search.run(args)
+        if args.verb == "summarize":
+            return summarize.run(args)
     except KagiError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
@@ -43,3 +48,8 @@ def main(argv: list[str] | None = None) -> int:
 def search_entry() -> int:
     """Backward-compat: ``kagi-search ARGS`` -> ``kagi search ARGS``."""
     return main(["search", *sys.argv[1:]])
+
+
+def summarize_entry() -> int:
+    """Backward-compat: ``kagi-summarize ARGS`` -> ``kagi summarize ARGS``."""
+    return main(["summarize", *sys.argv[1:]])

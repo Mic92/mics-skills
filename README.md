@@ -4,20 +4,20 @@ A collection of CLI tools and skills designed to be useful for LLM agents.
 
 ## Tools
 
-| Tool                                    | Description                                                     | Skill                                        |
-| --------------------------------------- | --------------------------------------------------------------- | -------------------------------------------- |
-| [browser-cli](browser-cli/)             | Control Firefox browser from the command line                   | [SKILL.md](browser-cli/skill/SKILL.md)       |
-| [buildbot-pr-check](buildbot-pr-check/) | Inspect Buildbot (buildbot-nix) CI for a PR                     | [SKILL.md](buildbot-pr-check/skill/SKILL.md) |
-| [calendar-cli](calendar-cli/)           | Manage calendar events and send meeting invitations             | [SKILL.md](calendar-cli/skill/SKILL.md)      |
-| [context7-cli](context7-cli/)           | Fetch up-to-date library documentation from Context7            | [SKILL.md](context7-cli/skill/SKILL.md)      |
-| [db-cli](db-cli/)                       | Search Deutsche Bahn train connections                          | [SKILL.md](db-cli/skill/SKILL.md)            |
-| [gmaps-cli](gmaps-cli/)                 | Search for places and get directions using Google Maps          | [SKILL.md](gmaps-cli/skill/SKILL.md)         |
-| [kagi](kagi/)                           | Search the web using Kagi with Quick Answer AI summaries        | [SKILL.md](kagi/skill/SKILL.md)              |
-| [n8n-cli](n8n-cli/)                     | Manage n8n workflows, credentials, executions, tags, and data   | [SKILL.md](n8n-cli/skill/SKILL.md)           |
-| [pexpect-cli](pexpect-cli/)             | Persistent pexpect sessions for interactive terminal automation | [SKILL.md](pexpect-cli/skill/SKILL.md)       |
-| [screenshot-cli](screenshot-cli/)       | Cross-platform screenshots for macOS and KDE Wayland            | [SKILL.md](screenshot-cli/skill/SKILL.md)    |
-| [tasker-cli](tasker-cli/)               | Deploy and trigger Android Tasker tasks via WebUI and adb       | [SKILL.md](tasker-cli/skill/SKILL.md)        |
-| [weather-cli](weather-cli/)             | Weather forecasts worldwide via Bright Sky API (DWD/MOSMIX)     | [SKILL.md](weather-cli/skill/SKILL.md)       |
+| Tool                                    | Description                                                      | Skill                                        |
+| --------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------- |
+| [browser-cli](browser-cli/)             | Control Firefox browser from the command line                    | [SKILL.md](browser-cli/skill/SKILL.md)       |
+| [buildbot-pr-check](buildbot-pr-check/) | Inspect Buildbot (buildbot-nix) CI for a PR                      | [SKILL.md](buildbot-pr-check/skill/SKILL.md) |
+| [calendar-cli](calendar-cli/)           | Manage calendar events and send meeting invitations              | [SKILL.md](calendar-cli/skill/SKILL.md)      |
+| [context7-cli](context7-cli/)           | Fetch up-to-date library documentation from Context7             | [SKILL.md](context7-cli/skill/SKILL.md)      |
+| [db-cli](db-cli/)                       | Search Deutsche Bahn train connections                           | [SKILL.md](db-cli/skill/SKILL.md)            |
+| [gmaps-cli](gmaps-cli/)                 | Search for places and get directions using Google Maps           | [SKILL.md](gmaps-cli/skill/SKILL.md)         |
+| [kagi](kagi/)                           | Search the web and summarize URLs via Kagi (no API credits used) | [SKILL.md](kagi/skill/SKILL.md)              |
+| [n8n-cli](n8n-cli/)                     | Manage n8n workflows, credentials, executions, tags, and data    | [SKILL.md](n8n-cli/skill/SKILL.md)           |
+| [pexpect-cli](pexpect-cli/)             | Persistent pexpect sessions for interactive terminal automation  | [SKILL.md](pexpect-cli/skill/SKILL.md)       |
+| [screenshot-cli](screenshot-cli/)       | Cross-platform screenshots for macOS and KDE Wayland             | [SKILL.md](screenshot-cli/skill/SKILL.md)    |
+| [tasker-cli](tasker-cli/)               | Deploy and trigger Android Tasker tasks via WebUI and adb        | [SKILL.md](tasker-cli/skill/SKILL.md)        |
+| [weather-cli](weather-cli/)             | Weather forecasts worldwide via Bright Sky API (DWD/MOSMIX)      | [SKILL.md](weather-cli/skill/SKILL.md)       |
 
 Each tool ships its skill definition under `<tool>/skill/` (installed to
 `$out/share/skills/<tool>/`). The home-manager modules symlink that into
