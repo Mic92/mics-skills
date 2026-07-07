@@ -4,29 +4,13 @@
   hatchling,
   makeWrapper,
   pytestCheckHook,
-  # Linux-only screenshot backends, null on non-Linux
-  grim ? null,
-  spectacle ? null,
-  sway ? null,
-  jq,
+  grim,
   stdenv,
 }:
 
-let
-  isLinux = stdenv.hostPlatform.isLinux;
-  runtimeDeps = lib.optionals isLinux (
-    lib.filter (p: p != null) [
-      grim
-      spectacle
-      # sway gives us swaymsg for window-geometry queries on sway sessions;
-      # niri uses its own IPC and isn't bundled because it's the running
-      # compositor.
-      sway
-      jq
-    ]
-  );
-in
-
+# spectacle, swaymsg and niri ship with the desktop/compositor, so they are
+# left off PATH to avoid dragging KDE (spectacle -> qtbase/kio/kservice) onto
+# everyone. grim is standalone and may be missing, so it stays bundled.
 buildPythonApplication {
   pname = "screenshot-cli";
   version = "0.1.0";
@@ -39,15 +23,14 @@ buildPythonApplication {
 
   nativeCheckInputs = [ pytestCheckHook ];
 
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = lib.optional stdenv.hostPlatform.isLinux makeWrapper;
 
   postInstall = ''
     mkdir -p $out/share/skills
     cp -r ${./skill} $out/share/skills/screenshot-cli
   ''
-  + lib.optionalString (runtimeDeps != [ ]) ''
-    wrapProgram $out/bin/screenshot-cli \
-      --prefix PATH : ${lib.makeBinPath runtimeDeps}
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
+    wrapProgram $out/bin/screenshot-cli --prefix PATH : ${lib.makeBinPath [ grim ]}
   '';
 
   meta = {

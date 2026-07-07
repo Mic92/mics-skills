@@ -7,6 +7,7 @@ pointer, so those paths were indefinite hangs in disguise.
 """
 
 import argparse
+import json
 import os
 import platform
 import shutil
@@ -114,6 +115,19 @@ def capture_niri(mode: str, output: str, delay: int) -> None:
     raise RuntimeError("niri screenshot action returned but file never appeared")
 
 
+def focused_window_geometry(node: dict) -> str | None:
+    """Return the focused swaymsg node's rect as a grim -g "X,Y WxH" string."""
+    if node.get("focused"):
+        rect = node.get("rect", {})
+        return f"{rect['x']},{rect['y']} {rect['width']}x{rect['height']}"
+    for key in ("nodes", "floating_nodes"):
+        for child in node.get(key, []):
+            geom = focused_window_geometry(child)
+            if geom is not None:
+                return geom
+    return None
+
+
 def capture_grim(mode: str, output: str, delay: int) -> None:
     if delay > 0:
         time.sleep(delay)
@@ -126,19 +140,8 @@ def capture_grim(mode: str, output: str, delay: int) -> None:
                 tree = subprocess.run(
                     ["swaymsg", "-t", "get_tree"], capture_output=True, text=True, check=True
                 )
-                jq = subprocess.run(
-                    [
-                        "jq",
-                        "-r",
-                        r'.. | select(.focused?) | .rect | "\(.x),\(.y) \(.width)x\(.height)"',
-                    ],
-                    input=tree.stdout,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                geom = jq.stdout.strip().split("\n")[0]
-            except subprocess.CalledProcessError:
+                geom = focused_window_geometry(json.loads(tree.stdout))
+            except (subprocess.CalledProcessError, json.JSONDecodeError):
                 pass
         if geom:
             run(["grim", "-g", geom, output])
