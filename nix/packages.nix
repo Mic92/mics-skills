@@ -9,6 +9,7 @@
 }:
 let
   pyCall = python3.pkgs.callPackage;
+  kagi = pyCall ../kagi { };
 in
 {
   browser-cli = pyCall ../browser-cli { };
@@ -18,7 +19,9 @@ in
   context7-cli = pyCall ../context7-cli { };
   db-cli = callPackage ../db-cli { };
   gmaps-cli = pyCall ../gmaps-cli { };
-  kagi-search = pyCall ../kagi-search { };
+  inherit kagi;
+  # Backward-compat alias for the pre-verbs `kagi-search` package name.
+  kagi-search = kagi;
   n8n-cli = pyCall ../n8n-cli { };
   pexpect-cli = callPackage ../pexpect-cli { };
   screenshot-cli = pyCall ../screenshot-cli { };

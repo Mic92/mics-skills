@@ -57,7 +57,7 @@
         pytest
       ];
     };
-    "kagi-search" = {
+    "kagi" = {
       extraPythonPackages = with pkgs.python3.pkgs; [
         beautifulsoup4
         types-beautifulsoup4
