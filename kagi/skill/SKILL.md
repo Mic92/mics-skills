@@ -6,8 +6,8 @@ description: Search the web or summarize a URL via Kagi (no API credits used; se
 # Usage
 
 The `kagi` CLI has two verbs: `search` (discover) and `summarize` (enrich a
-known URL). The original `kagi-search` and the new `kagi-summarize` binary
-names work as aliases.
+known URL). `kagi-search` and `kagi-summarize` are also available as
+standalone binaries (shortcuts for the corresponding verbs).
 
 ## Search
 
@@ -24,12 +24,24 @@ kagi search -l "search query"
 # More links
 kagi search -l -n 10 "search query"
 
-# JSON output for parsing
-kagi search -j "search query" | jq '.results[0].url'
+# Plain text (strip markdown markup)
+kagi search --text "search query"
 
-# Original kagi-search invocation still works:
+# JSON for scripts (note: .results is empty unless you pass -l)
+kagi search -j -l "search query" | jq -r '.quick_answer.references[].url'
+
+# Shortcut form:
 kagi-search "search query"
 ```
+
+**Reading vs scripting.** The default (no `-j`) output _is_ a synthesized,
+cited answer — Kagi's Quick Answer plus a References list of source URLs. Use
+bare `kagi search` whenever you're _reading_ the result: it's already clean
+markdown and uses fewer tokens than JSON. Don't reach for `-j` just because
+you're an agent — JSON only pays off when a _script_ parses fields. For that
+case use `-j` (add `-l -n 10` to populate `.results` with raw candidate
+links); the JSON shape is `{results, quick_answer: {markdown, references:
+[{title, url, contribution}]}}`.
 
 ## Summarize
 
@@ -48,7 +60,7 @@ kagi summarize --takeaway https://example.com/article
 kagi summarize --text https://example.com/article
 
 # Raw JSON
-kagi summarize --json https://example.com/article
+kagi summarize -j https://example.com/article
 
 # Target language
 kagi summarize --language ES https://example.com/article
@@ -56,3 +68,6 @@ kagi summarize --language ES https://example.com/article
 # Alias form:
 kagi-summarize https://example.com/article
 ```
+
+Both verbs share the same output flags: `-j`/`--json`, `--text`, `--markdown`
+(default).
