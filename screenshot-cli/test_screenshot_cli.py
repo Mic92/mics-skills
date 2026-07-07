@@ -62,3 +62,32 @@ def test_geometry_parse_grim_format() -> None:
 def test_geometry_parse_rejects_garbage() -> None:
     with pytest.raises(SystemExit):
         sc.parse_geometry("10,20,300,400")
+
+
+def test_focused_window_geometry_finds_nested_focus() -> None:
+    # Focused window can sit arbitrarily deep in the swaymsg tree.
+    tree = {
+        "focused": False,
+        "nodes": [
+            {
+                "focused": False,
+                "nodes": [
+                    {"focused": False, "rect": {"x": 0, "y": 0, "width": 1, "height": 1}},
+                    {"focused": True, "rect": {"x": 10, "y": 20, "width": 300, "height": 400}},
+                ],
+            }
+        ],
+    }
+    assert sc.focused_window_geometry(tree) == "10,20 300x400"
+
+
+def test_focused_window_geometry_finds_floating() -> None:
+    tree = {
+        "focused": False,
+        "floating_nodes": [{"focused": True, "rect": {"x": 5, "y": 6, "width": 7, "height": 8}}],
+    }
+    assert sc.focused_window_geometry(tree) == "5,6 7x8"
+
+
+def test_focused_window_geometry_none_when_unfocused() -> None:
+    assert sc.focused_window_geometry({"focused": False, "nodes": []}) is None
