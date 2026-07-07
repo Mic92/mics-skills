@@ -3,11 +3,12 @@
   buildPythonApplication,
   hatchling,
   beautifulsoup4,
+  pytestCheckHook,
 }:
 
 buildPythonApplication {
   pname = "kagi";
-  version = "0.2.0";
+  version = "0.3.0";
 
   src = ./.;
 
@@ -16,6 +17,10 @@ buildPythonApplication {
   build-system = [ hatchling ];
 
   dependencies = [ beautifulsoup4 ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "kagi" ];
 
   postInstall = ''
     mkdir -p $out/share/skills
