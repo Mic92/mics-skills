@@ -20,6 +20,7 @@ from urllib.request import OpenerDirector, Request
 from bs4 import BeautifulSoup, Tag
 
 from ._auth import USER_AGENT, KagiError, build_opener_authed, get_session_token, load_config
+from ._text import markdown_to_text
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,6 @@ class QuickAnswer:
 
     html: str
     markdown: str
-    raw_text: str
     references: list[dict[str, Any]]
 
 
@@ -250,7 +250,6 @@ class KagiSearch:
             return QuickAnswer(
                 html=html,
                 markdown=markdown,
-                raw_text=markdown,
                 references=references,
             )
 
@@ -279,7 +278,30 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("-t", "--token", help="Session token (overrides config)")
     parser.add_argument("-c", "--config", help="Config file path")
-    parser.add_argument("-j", "--json", action="store_true", help="Output as JSON")
+    fmt = parser.add_mutually_exclusive_group()
+    fmt.add_argument(
+        "-j",
+        "--json",
+        action="store_const",
+        const="json",
+        dest="format",
+        help="Output as JSON",
+    )
+    fmt.add_argument(
+        "--text",
+        action="store_const",
+        const="text",
+        dest="format",
+        help="Output plain text (strips markdown markup)",
+    )
+    fmt.add_argument(
+        "--markdown",
+        action="store_const",
+        const="markdown",
+        dest="format",
+        help="Output markdown (default)",
+    )
+    parser.set_defaults(format="markdown")
     parser.add_argument(
         "-d",
         "--debug",
@@ -316,34 +338,37 @@ def run(args: argparse.Namespace) -> int:
         results = client.search(args.query, limit=args.num_results)
     qa = client.quick_answer(args.query)
 
-    if args.json:
+    if args.format == "json":
         out: dict[str, Any] = {
             "results": [{"title": r.title, "url": r.url, "snippet": r.snippet} for r in results],
         }
         if qa:
             out["quick_answer"] = {
                 "markdown": qa.markdown,
-                "raw_text": qa.raw_text,
+                # Backward-compat: released `kagi-search -j` emitted `raw_text`
+                # (identical to `markdown`). Kept as an alias so existing
+                # consumers of `.quick_answer.raw_text` don't break.
+                "raw_text": qa.markdown,
                 "references": qa.references,
             }
         print(json.dumps(out, indent=2))
     else:
-        _render_human(qa, results)
+        _render_human(qa, results, plain=args.format == "text")
 
-    if not qa and not results and not args.json:
+    if not qa and not results and args.format != "json":
         print(colorize("No results found", color="red"), file=sys.stderr)
     return 0
 
 
-def _render_human(qa: QuickAnswer | None, results: list[SearchResult]) -> None:
+def _render_human(
+    qa: QuickAnswer | None, results: list[SearchResult], *, plain: bool = False
+) -> None:
     """Pretty-print Quick Answer + result list to stdout."""
     if qa:
         print(f"\n{colorize('Quick Answer', color='cyan', bold=True)}")
         print(colorize("─" * 80, color="cyan", dim=True))
-        if qa.raw_text:
-            print(qa.raw_text)
-        elif qa.markdown:
-            print(qa.markdown)
+        if qa.markdown:
+            print(markdown_to_text(qa.markdown) if plain else qa.markdown)
         if qa.references:
             print()
             print(colorize("References:", color="cyan", dim=True))
