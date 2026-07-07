@@ -8,6 +8,9 @@
   android-tools,
   makeWrapper,
   kdePackages,
+  # screenshot-cli backends, hoisted here so downstream users can drop one via
+  # `.override`, e.g. `.override { spectacle = null; }` on non-KDE systems.
+  spectacle ? if stdenv.hostPlatform.isLinux then kdePackages.spectacle else null,
 }:
 let
   pyCall = python3.pkgs.callPackage;
@@ -24,7 +27,7 @@ in
   n8n-cli = pyCall ../n8n-cli { };
   pexpect-cli = callPackage ../pexpect-cli { };
   screenshot-cli = pyCall ../screenshot-cli {
-    spectacle = if stdenv.hostPlatform.isLinux then kdePackages.spectacle else null;
+    inherit spectacle;
   };
   tasker-cli = pyCall ../tasker-cli { inherit android-tools makeWrapper; };
   weather-cli = pyCall ../weather-cli { };
