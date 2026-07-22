@@ -2445,6 +2445,12 @@ if (!window.__browserCliInjected) {
     is,
     scroll,
     upload,
+    // Agents guess go() exists; error must point at the real mechanism.
+    go() {
+      throw new Error(
+        "go() is not a JS API. Navigate with: browser-cli --go URL",
+      );
+    },
   };
   const execApiNames = Object.keys(execApi);
   const execApiValues = Object.values(execApi);
