@@ -28,7 +28,6 @@
         ];
       };
   };
-  buildbot-pr-check = { };
   calendar-cli = { };
   context7-cli = { };
   db-cli = { };

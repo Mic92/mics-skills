@@ -36,11 +36,6 @@
         pytest
       ];
     };
-    "buildbot-pr-check" = {
-      extraPythonPackages = with pkgs.python3.pkgs; [
-        pytest
-      ];
-    };
     "browser-cli" = {
       extraPythonPackages = with pkgs.python3.pkgs; [
         websockets
