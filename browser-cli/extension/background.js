@@ -45,23 +45,19 @@ const managedTabs = new Map();
 /** @type {string|undefined} Currently active managed tab ID */
 let activeTabId;
 
+/** @type {number} Next sequential tab ID */
+let nextTabId = 1;
+
 /**
- * Generate a short random ID for tabs.
- * Retries on the (astronomically unlikely) chance of collision so we
- * never silently clobber an existing managed tab.
+ * Generate a sequential numeric ID for tabs.
  * @returns {string}
  */
 function generateTabId() {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result;
+  let id;
   do {
-    result = "";
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-  } while (managedTabs.has(result));
-  return result;
+    id = String(nextTabId++);
+  } while (managedTabs.has(id));
+  return id;
 }
 
 /**
@@ -681,67 +677,13 @@ async function enableOnTab(tabId, shortId) {
   await browser.tabs.executeScript(tabId, { file: "Readability.js" });
   await browser.tabs.executeScript(tabId, { file: "content.js" });
 
+  // Mark tab with title prefix instead of injecting a banner
   await browser.tabs.executeScript(tabId, {
     code: `(${function (/** @type {string} */ id) {
-      if (!document.querySelector("#browser-cli-banner")) {
-        const banner = document.createElement("div");
-        banner.id = "browser-cli-banner";
-        Object.assign(banner.style, {
-          position: "fixed",
-          top: "0",
-          left: "0",
-          right: "0",
-          height: "40px",
-          background: "#2563eb",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 20px",
-          fontFamily: "system-ui, sans-serif",
-          fontSize: "14px",
-          zIndex: "999999",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        });
-
-        const text = document.createElement("span");
-        text.textContent = "🤖 Browser CLI: " + id;
-        banner.append(text);
-
-        const closeBtn = document.createElement("button");
-        closeBtn.textContent = "✕";
-        Object.assign(closeBtn.style, {
-          background: "none",
-          border: "none",
-          color: "white",
-          fontSize: "20px",
-          cursor: "pointer",
-          padding: "0",
-          width: "30px",
-          height: "30px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: "4px",
-          transition: "background 0.2s",
-        });
-
-        closeBtn.addEventListener(
-          "mouseover",
-          () => (closeBtn.style.background = "rgba(255,255,255,0.2)"),
-        );
-        closeBtn.addEventListener(
-          "mouseout",
-          () => (closeBtn.style.background = "none"),
-        );
-        closeBtn.addEventListener("click", () => {
-          browser.runtime.sendMessage({ command: "disableCLI" });
-        });
-        banner.append(closeBtn);
-
-        document.body.append(banner);
-        document.body.style.paddingTop = "40px";
+      if (!document._browserCliOriginalTitle) {
+        document._browserCliOriginalTitle = document.title;
       }
+      document.title = "🤖 " + id + " | " + document._browserCliOriginalTitle;
     }})('${shortId}')`,
   });
 
@@ -761,10 +703,9 @@ async function disableOnTab(tabId, shortId) {
 
   await browser.tabs.executeScript(tabId, {
     code: `(${function () {
-      const banner = document.querySelector("#browser-cli-banner");
-      if (banner) {
-        banner.remove();
-        document.body.style.paddingTop = "";
+      if (document._browserCliOriginalTitle) {
+        document.title = document._browserCliOriginalTitle;
+        delete document._browserCliOriginalTitle;
       }
     }})()`,
   });
