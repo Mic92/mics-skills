@@ -35,6 +35,7 @@
   kagi-search = { };
   n8n-cli = { };
   pexpect-cli = { };
+  queue = { };
   screenshot-cli = { };
   tasker-cli = { };
   weather-cli = { };
