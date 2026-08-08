@@ -20,6 +20,8 @@ in
   kagi-search = pyCall ../kagi-search { };
   n8n-cli = pyCall ../n8n-cli { };
   pexpect-cli = callPackage ../pexpect-cli { };
+  # agent-friendly frontend for pueue
+  queue = callPackage ../queue { };
   screenshot-cli = pyCall ../screenshot-cli { };
   tasker-cli = pyCall ../tasker-cli { inherit android-tools makeWrapper; };
   weather-cli = pyCall ../weather-cli { };
