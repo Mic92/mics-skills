@@ -59,11 +59,6 @@
         types-beautifulsoup4
       ];
     };
-    "n8n-cli" = {
-      extraPythonPackages = with pkgs.python3.pkgs; [
-        pytest
-      ];
-    };
     "weather-cli" = { };
   };
 

@@ -12,7 +12,6 @@ A collection of CLI tools and skills designed to be useful for LLM agents.
 | [db-cli](db-cli/)                 | Search Deutsche Bahn train connections                          | [SKILL.md](db-cli/skill/SKILL.md)         |
 | [gmaps-cli](gmaps-cli/)           | Search for places and get directions using Google Maps          | [SKILL.md](gmaps-cli/skill/SKILL.md)      |
 | [kagi-search](kagi-search/)       | Search the web using Kagi with Quick Answer AI summaries        | [SKILL.md](kagi-search/skill/SKILL.md)    |
-| [n8n-cli](n8n-cli/)               | Manage n8n workflows, credentials, executions, tags, and data   | [SKILL.md](n8n-cli/skill/SKILL.md)        |
 | [pexpect-cli](pexpect-cli/)       | Persistent pexpect sessions for interactive terminal automation | [SKILL.md](pexpect-cli/skill/SKILL.md)    |
 | [screenshot-cli](screenshot-cli/) | Cross-platform screenshots for macOS and KDE Wayland            | [SKILL.md](screenshot-cli/skill/SKILL.md) |
 | [tasker-cli](tasker-cli/)         | Deploy and trigger Android Tasker tasks via WebUI and adb       | [SKILL.md](tasker-cli/skill/SKILL.md)     |
@@ -33,7 +32,6 @@ nix run github:Mic92/mics-skills#context7-cli
 nix run github:Mic92/mics-skills#db-cli
 nix run github:Mic92/mics-skills#gmaps-cli
 nix run github:Mic92/mics-skills#kagi-search
-nix run github:Mic92/mics-skills#n8n-cli
 nix run github:Mic92/mics-skills#pexpect-cli
 nix run github:Mic92/mics-skills#screenshot-cli
 nix run github:Mic92/mics-skills#tasker-cli

@@ -18,7 +18,6 @@ in
   db-cli = callPackage ../db-cli { };
   gmaps-cli = pyCall ../gmaps-cli { };
   kagi-search = pyCall ../kagi-search { };
-  n8n-cli = pyCall ../n8n-cli { };
   pexpect-cli = callPackage ../pexpect-cli { };
   # agent-friendly frontend for pueue
   queue = callPackage ../queue { };
