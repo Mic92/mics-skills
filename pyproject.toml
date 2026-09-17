@@ -11,6 +11,8 @@ lint.ignore = [
   # fixmes
   "FIX",
 
+  "CPY",
+
   # Unused function argument
   "ARG001",
 
