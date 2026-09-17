@@ -15,6 +15,7 @@ rustPlatform.buildRustPackage {
       ./Cargo.toml
       ./Cargo.lock
       ./src
+      ./tests
       ./skill
     ];
   };
@@ -22,6 +23,9 @@ rustPlatform.buildRustPackage {
   cargoLock.lockFile = ./Cargo.lock;
 
   nativeBuildInputs = [ makeWrapper ];
+
+  # integration tests spin up a private pueued
+  nativeCheckInputs = [ pueue ];
 
   postInstall = ''
     mkdir -p $out/share/skills

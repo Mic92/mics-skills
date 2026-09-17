@@ -161,11 +161,20 @@ impl Daemon {
             .ok_or_else(|| format!("task {id} does not exist").into())
     }
 
-    /// Best-effort removal of a delivered task. The daemon refuses to remove
-    /// tasks that others depend on, which is exactly what we want for
-    /// `--after` pipelines, so failures are ignored.
-    fn auto_clean(&mut self, id: usize) {
-        let _ = self.request(Request::Remove(vec![id]));
+    /// Remove finished own tasks older than `keep`. `keep` must stay because
+    /// pueue allocates ids as max+1 and would otherwise recycle it. Removal
+    /// of `--after` dependencies is refused by the daemon; that's fine.
+    fn auto_clean(&mut self, keep: usize, session: &Option<String>) {
+        let Ok(state) = self.state() else { return };
+        let stale: Vec<usize> = state
+            .tasks
+            .values()
+            .filter(|task| task.id < keep && task.is_done() && owned(task, session))
+            .map(|task| task.id)
+            .collect();
+        if !stale.is_empty() {
+            let _ = self.request(Request::Remove(stale));
+        }
     }
 }
 
@@ -304,9 +313,14 @@ fn spawn_watchdog(deadline: Duration, ids: Vec<usize>) {
     });
 }
 
-/// Stream one task to completion, print its status line, auto-clean it and
-/// return its exit code.
-fn attach(daemon: &mut Daemon, id: usize, tail_ok: Option<usize>) -> Result<i32, Error> {
+/// Stream one task to completion, print its status line, garbage-collect
+/// older finished tasks and return its exit code.
+fn attach(
+    daemon: &mut Daemon,
+    id: usize,
+    tail_ok: Option<usize>,
+    session: &Option<String>,
+) -> Result<i32, Error> {
     send_request(
         Request::Stream(StreamRequest {
             tasks: TaskSelection::TaskIds(vec![id]),
@@ -347,7 +361,7 @@ fn attach(daemon: &mut Daemon, id: usize, tail_ok: Option<usize>) -> Result<i32,
         }
     }
     println!("task={id} {summary}");
-    daemon.auto_clean(id);
+    daemon.auto_clean(id, session);
     Ok(code)
 }
 
@@ -417,7 +431,7 @@ fn run(parser: &mut Parser) -> Result<i32, Error> {
         return Ok(0);
     }
     spawn_watchdog(timeout_from(timeout), vec![id]);
-    attach(&mut daemon, id, tail_ok)
+    attach(&mut daemon, id, tail_ok, &session)
 }
 
 fn wait(parser: &mut Parser) -> Result<i32, Error> {
@@ -435,8 +449,8 @@ fn wait(parser: &mut Parser) -> Result<i32, Error> {
     }
 
     let mut daemon = Daemon::connect()?;
+    let session = session();
     if ids.is_empty() {
-        let session = session();
         let state = daemon.state()?;
         ids = state
             .tasks
@@ -444,6 +458,7 @@ fn wait(parser: &mut Parser) -> Result<i32, Error> {
             .filter(|task| owned(task, &session))
             .map(|task| task.id)
             .collect();
+        ids.sort_unstable();
         if ids.is_empty() {
             println!("no tasks");
             return Ok(0);
@@ -453,7 +468,7 @@ fn wait(parser: &mut Parser) -> Result<i32, Error> {
     spawn_watchdog(timeout_from(timeout), ids.clone());
     let mut first_failure = 0;
     for id in ids {
-        let code = attach(&mut daemon, id, tail_ok)?;
+        let code = attach(&mut daemon, id, tail_ok, &session)?;
         if first_failure == 0 {
             first_failure = code;
         }
@@ -634,7 +649,7 @@ fn restart(parser: &mut Parser) -> Result<i32, Error> {
     }
     eprintln!("task={id}");
     spawn_watchdog(timeout_from(timeout), vec![id]);
-    attach(&mut daemon, id, None)
+    attach(&mut daemon, id, None, &session)
 }
 
 fn ps(parser: &mut Parser) -> Result<i32, Error> {
