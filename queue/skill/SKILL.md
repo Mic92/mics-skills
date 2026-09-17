@@ -14,7 +14,8 @@ EOF
 `task=<id>` is printed first.
 Output streams until the command finishes and the exit code is the command's exit code.
 Queues detach after ~100s queue with exit code 75.
-The task keeps running.
+The task keeps running. If `$PI_INBOX` is set you get an `[inbox: queue]`
+message when it finishes.
 
 ```bash
 queue wait <id>            # re-attach; replays output from the start

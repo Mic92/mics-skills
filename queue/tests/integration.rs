@@ -38,6 +38,7 @@ impl Sandbox {
             .args(args)
             .env("PUEUE_CONFIG_PATH", &self.config)
             .env("QUEUE_SESSION", "test")
+            .env("PI_INBOX", self.dir.join("inbox"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -108,5 +109,30 @@ fn old_delivered_tasks_are_cleaned() {
     assert!(
         !ids.contains(&(first as u64)),
         "task {first} still listed: {ids:?}"
+    );
+}
+
+/// A detached task reports its completion to $PI_INBOX.
+#[test]
+fn detached_task_notifies_inbox() {
+    use std::io::Read;
+    use std::os::unix::net::UnixListener;
+
+    let sandbox = Sandbox::new("inbox");
+    let listener = UnixListener::bind(sandbox.dir.join("inbox")).unwrap();
+    let out = sandbox.queue(&["run", "--timeout", "1"], "sleep 3; echo finished-marker");
+    assert_eq!(out.status.code(), Some(75), "expected detach: {out:?}");
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(stderr.contains("[inbox]"), "no inbox hint: {stderr}");
+
+    let (mut conn, _) = listener.accept().unwrap();
+    let mut msg = String::new();
+    conn.read_to_string(&mut msg).unwrap();
+    let msg: serde_json::Value = serde_json::from_str(&msg).unwrap();
+    assert_eq!(msg["source"], "queue");
+    let text = msg["text"].as_str().unwrap();
+    assert!(
+        text.contains("success") && text.contains("finished-marker"),
+        "{text}"
     );
 }
