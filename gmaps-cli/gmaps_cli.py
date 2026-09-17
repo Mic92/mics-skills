@@ -91,7 +91,7 @@ def search_place(api_key: str, query: str) -> dict[str, Any] | None:
     body = {"textQuery": query, "maxResultCount": 1}
 
     try:
-        request = urllib.request.Request(  # noqa: S310
+        request = urllib.request.Request(
             endpoint,
             data=json.dumps(body).encode("utf-8"),
             headers=headers,
@@ -158,7 +158,7 @@ def search_places_nearby(
         }
 
     try:
-        request = urllib.request.Request(  # noqa: S310
+        request = urllib.request.Request(
             endpoint,
             data=json.dumps(body).encode("utf-8"),
             headers=headers,
@@ -310,7 +310,7 @@ class DirectionsProcessor:
         )
 
         try:
-            request = urllib.request.Request(  # noqa: S310
+            request = urllib.request.Request(
                 endpoint,
                 data=json.dumps(body).encode("utf-8"),
                 headers=headers,

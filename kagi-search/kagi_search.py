@@ -4,25 +4,31 @@ Kagi search script using session token authentication.
 Scrapes search results from Kagi web interface.
 """
 
+import argparse
+import gzip
 import json
+import logging
+import os
+import re
 import subprocess
 import sys
-import os
-from pathlib import Path
-from typing import List, Dict, Optional, Any
-from urllib.request import Request, HTTPCookieProcessor, build_opener
-from urllib.parse import urlencode
-from urllib.error import URLError, HTTPError
-from http.cookiejar import CookieJar
-import gzip
-from bs4 import BeautifulSoup, Tag
 import time
 from dataclasses import dataclass
-import argparse
-import logging
+from http.cookiejar import CookieJar
+from pathlib import Path
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import HTTPCookieProcessor, Request, build_opener
+
+from bs4 import BeautifulSoup, Tag
 
 # Module-level logger
 logger = logging.getLogger(__name__)
+
+
+class KagiError(Exception):
+    """Raised when talking to Kagi fails (auth, network, unexpected page)."""
 
 
 def colorize(text: str, color: str = "", bold: bool = False, dim: bool = False) -> str:
@@ -114,13 +120,13 @@ class QuickAnswer:
     html: str
     markdown: str
     raw_text: str
-    references: List[Dict[str, Any]]
+    references: list[dict[str, Any]]
 
 
 class KagiSearch:
     """Kagi search client using session token authentication."""
 
-    def __init__(self, session_token: Optional[str] = None, config_path: Optional[str] = None):
+    def __init__(self, session_token: str | None = None, config_path: str | None = None):
         """
         Initialize Kagi search client.
 
@@ -145,7 +151,7 @@ class KagiSearch:
         # Authenticate with token
         self._authenticate()
 
-    def _load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
+    def _load_config(self, config_path: str | None = None) -> dict[str, Any]:
         """Load configuration from file."""
         if not config_path:
             config_file = Path.home() / ".config" / "kagi" / "config.json"
@@ -167,10 +173,10 @@ class KagiSearch:
             return default_config
 
         with open(config_file, "r") as f:
-            data: Dict[str, Any] = json.load(f)
+            data: dict[str, Any] = json.load(f)
             return data
 
-    def _get_session_token(self, config: Dict[str, Any]) -> str:
+    def _get_session_token(self, config: dict[str, Any]) -> str:
         """Get session token using password command from config."""
         password_command = config.get("password_command", "rbw get kagi-session-link")
 
@@ -195,7 +201,7 @@ class KagiSearch:
                 stderr_msg = colorize(f"stderr: {e.stderr}", color="red")
                 print(stderr_msg, file=sys.stderr)
             sys.exit(1)
-        except Exception as e:
+        except OSError as e:
             error_msg = colorize(f"Error getting session token: {e}", color="red", bold=True)
             print(error_msg, file=sys.stderr)
             sys.exit(1)
@@ -208,17 +214,15 @@ class KagiSearch:
 
         try:
             response = self.opener.open(request, timeout=30)
-            final_url = response.geturl()
+        except (URLError, OSError) as e:
+            msg = f"Failed to authenticate with token: {e}"
+            raise KagiError(msg) from e
+        final_url = response.geturl()
+        if "/signin" in final_url or "/welcome" in final_url:
+            msg = f"Authentication failed - redirected to {final_url}"
+            raise KagiError(msg)
 
-            # Check if we were redirected to home page or html search (successful auth)
-            if final_url in [f"{self.base_url}/", self.base_url, f"{self.base_url}/html/search"]:
-                return  # Success
-            elif "/signin" in final_url or "/welcome" in final_url:
-                raise Exception(f"Authentication failed - redirected to {final_url}")
-        except Exception as e:
-            raise Exception(f"Failed to authenticate with token: {e}")
-
-    def search(self, query: str, limit: int = 10) -> List[SearchResult]:
+    def search(self, query: str, limit: int = 10) -> list[SearchResult]:
         """
         Search Kagi and return results.
 
@@ -256,7 +260,8 @@ class KagiSearch:
                 # Check if we're redirected to sign in
                 final_url = response.geturl()
                 if "/signin" in final_url or "/welcome" in final_url:
-                    raise Exception(f"Authentication failed - redirected to {final_url}")
+                    msg = f"Authentication failed - redirected to {final_url}"
+                    raise KagiError(msg)
 
                 # Read response
                 content = response.read()
@@ -272,16 +277,15 @@ class KagiSearch:
 
                 # Find results container
                 results_box = soup.find(class_="results-box")
-                if not results_box or isinstance(results_box, str):
+                if not isinstance(results_box, Tag):
                     if attempt < max_retries - 1:
                         time.sleep(retry_delay)
                         continue
-                    raise Exception("No results box found on page")
+                    msg = "No results box found on page"
+                    raise KagiError(msg)
 
                 # Extract search results
                 results = []
-                if not isinstance(results_box, Tag):
-                    raise Exception("Results box is not a Tag element")
                 search_results = results_box.find_all(class_="search-result")
 
                 for result in search_results[:limit]:
@@ -328,7 +332,8 @@ class KagiSearch:
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
-                raise Exception(f"Request failed: {e}")
+                msg = f"Request failed: {e}"
+                raise KagiError(msg) from e
 
         return []
 
@@ -339,7 +344,7 @@ class KagiSearch:
                 return str(cookie.value) if cookie.value else ""
         return ""
 
-    def get_quick_answer(self, query: str) -> Optional[QuickAnswer]:
+    def get_quick_answer(self, query: str) -> QuickAnswer | None:
         """
         Get Kagi Quick Answer for a query.
 
@@ -381,7 +386,8 @@ class KagiSearch:
             final_url = response.geturl()
             logger.debug(f"Final URL: {final_url}")
             if "/signin" in final_url or "/welcome" in final_url:
-                raise Exception(f"Authentication failed - redirected to {final_url}")
+                msg = f"Authentication failed - redirected to {final_url}"
+                raise KagiError(msg)
 
             # Read response
             content = response.read()
@@ -431,8 +437,6 @@ class KagiSearch:
             # Parse references from references_md (format: [^1]: [Title](URL) (percent%))
             references = []
             if references_md:
-                import re
-
                 # Match pattern like: [^1]: [Title](URL) (22%)
                 # Use non-greedy match for URL with lookahead to handle URLs containing parentheses
                 ref_pattern = r"\[\^\d+\]:\s*\[([^\]]+)\]\((.+?)\)\s*\((\d+)%\)"
@@ -456,7 +460,7 @@ class KagiSearch:
                 html=html, markdown=markdown, raw_text=markdown, references=references
             )
 
-        except Exception as e:
+        except (KagiError, URLError, OSError, UnicodeDecodeError) as e:
             # Quick Answer might not be available for all queries
             logger.debug(f"Quick Answer error: {type(e).__name__}: {e}")
             return None
@@ -496,7 +500,7 @@ def main() -> None:
     # Initialize client
     try:
         client = KagiSearch(session_token=args.token, config_path=args.config)
-    except Exception as e:
+    except (KagiError, OSError, json.JSONDecodeError) as e:
         error_msg = colorize(f"Error initializing Kagi client: {e}", color="red", bold=True)
         print(error_msg, file=sys.stderr)
         sys.exit(1)
@@ -505,14 +509,14 @@ def main() -> None:
     try:
         results = client.search(args.query, limit=args.num_results) if args.links else []
         quick_answer = client.get_quick_answer(args.query)
-    except Exception as e:
+    except (KagiError, OSError) as e:
         error_msg = colorize(f"Search failed: {e}", color="red", bold=True)
         print(error_msg, file=sys.stderr)
         sys.exit(1)
 
     # Output results
     if args.json:
-        output: Dict[str, Any] = {
+        output: dict[str, Any] = {
             "results": [{"title": r.title, "url": r.url, "snippet": r.snippet} for r in results]
         }
         if quick_answer:

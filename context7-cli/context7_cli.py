@@ -111,7 +111,7 @@ def get_api_key_from_command(command: str) -> str | None:
         # Using shell=True is intentional here - the command comes from user's
         # config file, similar to how kagi-search handles password_command.
         # The user controls both the config and the command being executed.
-        result = subprocess.run(  # noqa: S602
+        result = subprocess.run(
             command,
             shell=True,
             capture_output=True,
@@ -216,10 +216,10 @@ def search_libraries(library_name: str, query: str) -> SearchResponse:
     url = f"{CONTEXT7_API_BASE_URL}/v2/libs/search?{params}"
     validate_url(url)
 
-    request = urllib.request.Request(url, headers=make_headers())  # noqa: S310
+    request = urllib.request.Request(url, headers=make_headers())
 
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+        with urllib.request.urlopen(request, timeout=30) as response:
             data = json.loads(response.read().decode("utf-8"))
             results = [
                 SearchResult(
@@ -271,10 +271,10 @@ def get_documentation(library_id: str, query: str, output_format: str = "txt") -
     if output_format == "txt":
         headers["Accept"] = "text/plain"
 
-    request = urllib.request.Request(url, headers=headers)  # noqa: S310
+    request = urllib.request.Request(url, headers=headers)
 
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
+        with urllib.request.urlopen(request, timeout=60) as response:
             content: str = response.read().decode("utf-8")
             return content
     except urllib.error.HTTPError as e:

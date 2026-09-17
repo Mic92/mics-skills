@@ -61,9 +61,8 @@ def _scan_workflows(directory: str, ids: list[str] | None) -> list[tuple[str, di
             wf_id = data.get("id")
 
             # Filter by IDs if specified
-            if ids:
-                if not wf_id or wf_id not in ids:
-                    continue
+            if ids and (not wf_id or wf_id not in ids):
+                continue
 
             # Check for duplicate IDs
             if wf_id and wf_id in seen_ids:
@@ -134,9 +133,7 @@ def _workflows_differ(local: dict[str, Any], remote: dict[str, Any]) -> bool:
         if _normalize(local.get(field)) != _normalize(remote.get(field)):
             return True
     # Compare active state
-    if local.get("active") != remote.get("active"):
-        return True
-    return False
+    return local.get("active") != remote.get("active")
 
 
 def cmd_apply(client: Client, ns: Namespace) -> None:
@@ -221,13 +218,11 @@ def cmd_apply(client: Client, ns: Namespace) -> None:
         # Conflict detection: remote newer than local
         local_updated = data.get("updatedAt")
         remote_updated = remote.get("updatedAt")
-        if local_updated and remote_updated and remote_updated > local_updated:
-            if not ns.force:
-                print(
-                    f"  conflict: {basename} (remote is newer: {remote_updated} > {local_updated})"
-                )
-                conflicts += 1
-                continue
+        remote_newer = local_updated and remote_updated and remote_updated > local_updated
+        if remote_newer and not ns.force:
+            print(f"  conflict: {basename} (remote is newer: {remote_updated} > {local_updated})")
+            conflicts += 1
+            continue
 
         # Update
         if ns.dry_run:

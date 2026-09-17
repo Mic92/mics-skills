@@ -132,7 +132,7 @@ EXECUTION_STOPPED = {
 class FakeN8NHandler(BaseHTTPRequestHandler):
     """Route requests to canned responses based on method + path."""
 
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+    def log_message(self, format: str, *args: object) -> None:
         pass  # silence server logs during tests
 
     def _send(self, code: int, body: Any) -> None:
@@ -147,7 +147,7 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
 
     # -- routing -------------------------------------------------------------
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         p = self.path.split("?")[0]  # strip query string for matching
 
         routes: dict[str, Any] = {
@@ -173,7 +173,7 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
         else:
             self._send(404, {"message": f"Not found: {p}"})
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         self._read_body()
         p = self.path.split("?")[0]
 
@@ -202,7 +202,7 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
         else:
             self._send(404, {"message": f"Not found: {p}"})
 
-    def do_PUT(self) -> None:  # noqa: N802
+    def do_PUT(self) -> None:
         raw = self._read_body()
         p = self.path.split("?")[0]
 
@@ -218,7 +218,7 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
         else:
             self._send(404, {"message": f"Not found: {p}"})
 
-    def do_PATCH(self) -> None:  # noqa: N802
+    def do_PATCH(self) -> None:
         raw = self._read_body()
         p = self.path.split("?")[0]
 
@@ -242,7 +242,7 @@ class FakeN8NHandler(BaseHTTPRequestHandler):
         else:
             self._send(404, {"message": f"Not found: {p}"})
 
-    def do_DELETE(self) -> None:  # noqa: N802
+    def do_DELETE(self) -> None:
         p = self.path.split("?")[0]
 
         delete_routes: dict[str, Any] = {
@@ -291,12 +291,11 @@ def run_ok(
         "N8N_API_URL": f"http://{host}:{port}",
         "N8N_API_KEY": "test-key-1234",
     }
-    with patch.dict("os.environ", env, clear=False):
-        with patch("sys.argv", ["n8n-cli", *argv]):
-            try:
-                main()
-            except SystemExit as e:
-                assert e.code in (None, 0), f"Expected success but got exit {e.code}"
+    with patch.dict("os.environ", env, clear=False), patch("sys.argv", ["n8n-cli", *argv]):
+        try:
+            main()
+        except SystemExit as e:
+            assert e.code in (None, 0), f"Expected success but got exit {e.code}"
     out: str = capsys.readouterr().out
     return out
 
@@ -312,10 +311,9 @@ def run_fail(
         "N8N_API_URL": f"http://{host}:{port}",
         "N8N_API_KEY": "test-key-1234",
     }
-    with patch.dict("os.environ", env, clear=False):
-        with patch("sys.argv", ["n8n-cli", *argv]):
-            with pytest.raises(SystemExit) as exc_info:
-                main()
-            assert exc_info.value.code != 0
+    with patch.dict("os.environ", env, clear=False), patch("sys.argv", ["n8n-cli", *argv]):
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code != 0
     err: str = capsys.readouterr().err
     return err

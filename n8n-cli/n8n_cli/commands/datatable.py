@@ -9,7 +9,6 @@ from n8n_cli.client import Client
 from n8n_cli.errors import InputError
 from n8n_cli.output import emit, emit_json, emit_kv, emit_table, enc, read_json_input, ts
 
-
 # ---------------------------------------------------------------------------
 # Table-level commands
 # ---------------------------------------------------------------------------

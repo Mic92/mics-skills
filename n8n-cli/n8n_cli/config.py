@@ -38,7 +38,7 @@ def load_config(config_path: str | None = None) -> dict[str, Any]:
 def run_secret_command(command: str) -> str | None:
     """Execute a shell command to retrieve a secret value."""
     try:
-        result = subprocess.run(  # noqa: S602
+        result = subprocess.run(
             command,
             shell=True,
             capture_output=True,

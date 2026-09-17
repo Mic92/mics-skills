@@ -32,6 +32,7 @@ line-length = 100
 select = ["ALL"]
 ignore = [
   "T201",     # Allow print() in CLI tools
+  "CPY",      # No per-file copyright headers in this repo
   "COM812",   # Conflicts with ruff formatter
   "D203",     # Incompatible with D211 (no-blank-line-before-class)
   "D213",     # Incompatible with D212 (multi-line-summary-first-line)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Non-interactive screenshot CLI for agent use on macOS and Linux Wayland.
 
 Every mode runs to completion without human input. Interactive
@@ -14,7 +13,7 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 # -g coords are logical (pre-scale). On a 1.5x display, '0,0 100x100'
@@ -247,7 +246,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.geometry:
-        global screen_geom_override  # noqa: PLW0603
+        global screen_geom_override
         screen_geom_override = args.geometry
         mode = "geometry"
     else:
@@ -258,7 +257,7 @@ def main() -> None:
         outdir.mkdir(parents=True, exist_ok=True)
         # Include microseconds: niri actions complete in ~150ms so two calls
         # easily land in the same wall-clock second and clobber each other.
-        ts = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        ts = datetime.now(tz=UTC).astimezone().strftime("%Y%m%d-%H%M%S-%f")
         output = str(outdir / f"screenshot-{ts}.png")
     Path(output).parent.mkdir(parents=True, exist_ok=True)
 
