@@ -27,7 +27,10 @@ python3.pkgs.buildPythonApplication {
       bins = [ vdirsyncer ] ++ lib.optional (msmtp != null) msmtp;
     in
     [
-      "--suffix PATH : ${lib.makeBinPath bins}"
+      "--suffix"
+      "PATH"
+      ":"
+      (lib.makeBinPath bins)
     ];
 
   postInstall = ''
