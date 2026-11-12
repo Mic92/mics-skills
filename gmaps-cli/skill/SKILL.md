@@ -17,6 +17,9 @@ gmaps-cli nearby "restaurants" --location "48.1351,11.5820" --limit 3
 gmaps-cli route "Munich" "Berlin"
 gmaps-cli route "Times Square" "Central Park" --mode walking
 gmaps-cli route "Brooklyn" "Manhattan" --mode transit
+
+# Machine-readable output for search, nearby and route
+gmaps-cli route "Munich" "Berlin" --json
 ```
 
 # Output Examples
@@ -45,3 +48,10 @@ Route from Los Angeles, CA, USA to San Francisco, CA, USA
 Distance: 382 mi
 Duration: 5 hours 48 mins
 ```
+
+## JSON
+
+`--json` prints one object and exits non-zero with `{"error": "..."}` on
+failure. Routes carry `distance_meters`, `duration_seconds`, `url` and
+`steps`; a transit step has `transit` with `line`, `vehicle`, the stops and
+their times in UTC. `nearby` returns `{"places": [...]}`.

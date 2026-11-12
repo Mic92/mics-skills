@@ -2,6 +2,7 @@
 """Integration tests for gmaps-cli using pytest."""
 
 import io
+import json
 import sys
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -141,6 +142,54 @@ def test_nearby_restaurants(config_exists: bool) -> None:
 
     assert restaurant_count > 0, "No restaurants found"
     assert "Maps:" in result, "No Maps links found"
+
+
+def test_route_json(config_exists: bool) -> None:
+    """--json prints the route as one object with machine-readable fields."""
+    result = json.loads(
+        capture_cli_output(
+            ["route", "München Hbf", "München-Laim", "-m", "transit", "--json"]
+        )
+    )
+
+    assert result["mode"] == "transit"
+    assert 0 < result["distance_meters"] < 20_000
+    assert 0 < result["duration_seconds"] < 3600
+    assert result["url"].startswith("https://www.google.com/maps/dir/")
+    rides = [step["transit"] for step in result["steps"] if "transit" in step]
+    assert rides, "no transit step"
+    assert rides[0]["line"]
+    assert rides[0]["departure_time"].endswith("Z")
+
+
+def test_nearby_json(config_exists: bool) -> None:
+    result = json.loads(
+        capture_cli_output(
+            ["nearby", "pharmacy", "-l", "Marienplatz Munich", "-n", "2", "--json"]
+        )
+    )
+
+    assert len(result["places"]) == 2
+    for place in result["places"]:
+        assert place["name"]
+        assert place["address"]
+        assert place["url"].startswith("https://www.google.com/maps/search/")
+
+
+def test_search_json(config_exists: bool) -> None:
+    result = json.loads(capture_cli_output(["search", "Marienplatz Munich", "--json"]))
+
+    assert "Marienplatz" in result["name"]
+    assert 47 < result["lat"] < 49
+
+
+def test_no_route_json(config_exists: bool, capsys: pytest.CaptureFixture[str]) -> None:
+    """Failures are still JSON, and exit non-zero."""
+    with pytest.raises(SystemExit) as exit_info:
+        main(["route", "asdfqwer zzz", "qqqq xxxx 123", "--json"])
+
+    assert exit_info.value.code == 1
+    assert "error" in json.loads(capsys.readouterr().out)
 
 
 def test_help_command() -> None:
