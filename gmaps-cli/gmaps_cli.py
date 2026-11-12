@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+import contextlib
 import json
 import subprocess
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -351,7 +353,9 @@ class DirectionsProcessor:
                     "start_address": leg.get("startLocation", {}).get("address", ""),
                     "end_address": leg.get("endLocation", {}).get("address", ""),
                     "distance": distance_text,
+                    "distance_meters": distance_m,
                     "duration": duration_text,
+                    "duration_seconds": duration_s,
                     "steps": steps,
                 }
 
@@ -438,6 +442,22 @@ def setup(api_key_command: str) -> None:
         )
 
 
+def place_url(place: dict[str, Any]) -> str:
+    """Google Maps link for a place as returned by the search functions."""
+    url_params = MapsUrlParams()
+    url_params.query = place["name"]
+    url_params.place_id = place.get("place_id")
+    url_params.lat = place.get("lat")
+    url_params.lng = place.get("lng")
+    return generate_maps_url("search", url_params)
+
+
+def is_coordinates(location: str) -> bool:
+    return location.count(",") == 1 and all(
+        part.replace(".", "").replace("-", "").isdigit() for part in location.split(",")
+    )
+
+
 def search(query: str) -> None:
     """Search for a specific place"""
     config = load_config()
@@ -463,14 +483,7 @@ def search(query: str) -> None:
     if place_data["rating"]:
         print(f"Rating: {place_data['rating']} ({place_data['ratings_total']} reviews)")
 
-    # Add Google Maps link
-    url_params = MapsUrlParams()
-    url_params.query = place_data["name"]
-    url_params.place_id = place_data.get("place_id")
-    url_params.lat = place_data.get("lat")
-    url_params.lng = place_data.get("lng")
-    maps_url = generate_maps_url("search", url_params)
-    print(f"\nView on Google Maps: {maps_url}")
+    print(f"\nView on Google Maps: {place_url(place_data)}")
 
 
 def nearby(query: str, location: str | None = None, limit: int = 5) -> None:
@@ -486,13 +499,7 @@ def nearby(query: str, location: str | None = None, limit: int = 5) -> None:
         return
 
     # If location is provided and doesn't look like coordinates, search for it first
-    if location and not (
-        location.count(",") == 1
-        and all(
-            part.replace(".", "").replace("-", "").isdigit()
-            for part in location.split(",")
-        )
-    ):
+    if location and not is_coordinates(location):
         place_data = search_place(api_key, location)
         if place_data and place_data["lat"] and place_data["lng"]:
             location = f"{place_data['lat']},{place_data['lng']}"
@@ -524,14 +531,7 @@ def nearby(query: str, location: str | None = None, limit: int = 5) -> None:
             )
             print(f"   Rating: {place['rating']} {price}")
 
-        # Add Google Maps link for each place
-        url_params = MapsUrlParams()
-        url_params.query = place["name"]
-        url_params.place_id = place.get("place_id")
-        url_params.lat = place.get("lat")
-        url_params.lng = place.get("lng")
-        maps_url = generate_maps_url("search", url_params)
-        print(f"   Maps: {maps_url}")
+        print(f"   Maps: {place_url(place)}")
 
 
 class RouteProcessor:
@@ -675,6 +675,67 @@ def route(
     processor.print_route(directions, origin, destination, mode, arrival_time)
 
 
+def json_search(api_key: str, args: argparse.Namespace) -> dict[str, Any]:
+    place = search_place(api_key, args.query)
+    if not place:
+        return {"error": f"No results found for '{args.query}'"}
+    return {**place, "url": place_url(place)}
+
+
+def json_nearby(api_key: str, args: argparse.Namespace) -> dict[str, Any]:
+    location = args.location
+    if location and not is_coordinates(location):
+        center = search_place(api_key, location)
+        if not (center and center["lat"] and center["lng"]):
+            return {"error": f"Could not find location: {location}"}
+        location = f"{center['lat']},{center['lng']}"
+    places = search_places_nearby(api_key, args.query, location)[: args.limit]
+    return {"places": [{**place, "url": place_url(place)} for place in places]}
+
+
+def json_route(api_key: str, args: argparse.Namespace) -> dict[str, Any]:
+    times = (
+        parse_datetime(args.departure_time) if args.departure_time else None,
+        parse_datetime(args.arrival_time) if args.arrival_time else None,
+    )
+    directions = get_directions(
+        api_key, args.origin, args.destination, args.mode, times
+    )
+    if not directions:
+        return {"error": f"No route found from '{args.origin}' to '{args.destination}'"}
+    url_params = MapsUrlParams()
+    url_params.origin = args.origin
+    url_params.destination = args.destination
+    url_params.mode = args.mode
+    return {
+        "origin": args.origin,
+        "destination": args.destination,
+        "mode": args.mode,
+        **directions,
+        "url": generate_maps_url("directions", url_params),
+    }
+
+
+def json_result(args: argparse.Namespace) -> dict[str, Any]:
+    """What a command found, or {"error": message}."""
+    config = load_config()
+    api_key = get_api_key(config) if "api_key_command" in config else None
+    if not api_key:
+        return {"error": "No API key: run 'gmaps-cli setup' first"}
+    commands = {"search": json_search, "nearby": json_nearby, "route": json_route}
+    return commands[args.command](api_key, args)
+
+
+def print_json(args: argparse.Namespace) -> None:
+    """Print one JSON object and exit non-zero when it is an error."""
+    # The lookups report failures with print(); keep stdout pure JSON.
+    with contextlib.redirect_stdout(sys.stderr):
+        result = json_result(args)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if "error" in result:
+        sys.exit(1)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Search for places and get directions using Google Maps API"
@@ -725,9 +786,16 @@ def main(argv: list[str] | None = None) -> None:
         help="Desired arrival time (e.g., '2025-06-23 05:40' or '2025-06-23T05:40:00Z')",
     )
 
+    for command_parser in (search_parser, nearby_parser, route_parser):
+        command_parser.add_argument(
+            "--json", action="store_true", help="Print the result as JSON"
+        )
+
     args = parser.parse_args(argv)
 
-    if args.command == "setup":
+    if getattr(args, "json", False):
+        print_json(args)
+    elif args.command == "setup":
         setup(args.api_key_command)
     elif args.command == "search":
         search(args.query)
